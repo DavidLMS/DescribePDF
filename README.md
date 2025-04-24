@@ -48,7 +48,7 @@ describepdf/
 
 ```bash
 # Clonar el repositorio
-git clone https://github.com/tu-usuario/describepdf.git
+git clone https://github.com/davidlms/describepdf.git
 cd describepdf
 
 # Instalar dependencias
