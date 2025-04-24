@@ -25,12 +25,11 @@ def check_ollama_availability(endpoint):
         return False
         
     try:
-        ollama.client._host = endpoint.rstrip('/')
+        endpoint = endpoint.rstrip('/')
         
         response = requests.get(f"{endpoint}/api/version", timeout=5)
-        response.raise_for_status()
         
-        logging.info(f"Ollama is available at {endpoint}. Version: {response.json().get('version', 'unknown')}")
+        logging.info(f"Ollama is available at {endpoint}. Response status: {response.status_code}")
         return True
     except Exception as e:
         logging.error(f"Could not connect to Ollama at {endpoint}: {e}")
