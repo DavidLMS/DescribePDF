@@ -99,6 +99,11 @@ def create_ui():
             "Upload a PDF, adjust settings (optional), and click 'Convert to MD'. "
             "Default settings are loaded from the `.env` file on startup. Settings chosen here apply only to the current conversion."
         )
+        
+        gr.Markdown(
+            "> **Note**: This tool is also available as a command-line utility. "
+            "Run `describepdf --help` to see available options."
+        )
 
         with gr.Tabs():
             with gr.TabItem("Generate", id=0):
@@ -107,7 +112,6 @@ def create_ui():
                         pdf_input = gr.File(label="Upload PDF", file_types=['.pdf'], type="filepath")
                         convert_button = gr.Button("Convert to Markdown", variant="primary")
                         progress_output = gr.Textbox(label="Progress", interactive=False, lines=2)
-                        # Botón de descarga movido aquí
                         download_button = gr.File(label="Download Markdown", visible=False, interactive=False)
 
                     with gr.Column(scale=2):
@@ -123,7 +127,7 @@ def create_ui():
                     label="OpenRouter API Key" + (" (set in .env)" if has_env_api_key else ""),
                     type="password",
                     placeholder="Enter an API key here to override the one in .env" if has_env_api_key else "Enter your OpenRouter API key",
-                    value=""
+                    value="" 
                 )
                 vlm_model_input = gr.Dropdown(
                     label="VLM Model", choices=suggested_vlms,
@@ -167,3 +171,11 @@ def create_ui():
                 )
 
     return iface
+
+def launch_app():
+    """Función para iniciar la aplicación desde la línea de comandos."""
+    app = create_ui()
+    app.launch()
+    
+if __name__ == "__main__":
+    launch_app()
