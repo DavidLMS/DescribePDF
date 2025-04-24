@@ -30,100 +30,111 @@ def format_markdown_output(descriptions: list, original_filename: str):
 def convert_pdf_to_markdown(
     pdf_file_obj, # Objeto archivo de Gradio
     cfg: dict,
-    progress_callback # Función para reportar progreso
+    progress_callback # Función para reportar progreso (ahora acepta valor y texto)
 ):
     """
     Orquesta el proceso completo de conversión de PDF a Markdown descriptivo.
 
     Args:
         pdf_file_obj: Objeto archivo temporal de Gradio.
-        cfg (dict): Diccionario de configuración actual.
-        progress_callback: Función que acepta un string de estado.
+        cfg (dict): Diccionario de configuración actual para esta ejecución.
+        progress_callback: Función que acepta (float_progreso, string_estado).
 
     Returns:
         tuple: (str, str or None) - (status_message, result_markdown or None)
     """
     start_time = time.time()
-    progress_callback("Starting conversion process...")
+    progress_callback(0.0, "Starting conversion process...") # Progreso 0%
     logging.info("Starting conversion process...")
 
     # --- Validación Inicial ---
+    # La API Key ya fue validada en ui.py antes de llamar a esta función
     api_key = cfg.get("openrouter_api_key")
-    if not api_key:
-        msg = "Error: OpenRouter API Key is not configured."
-        logging.error(msg)
-        progress_callback(msg)
-        return msg, None
+    # if not api_key: # Esta validación ya no es estrictamente necesaria aquí
+    #     msg = "Error: OpenRouter API Key is not configured."
+    #     logging.error(msg)
+    #     progress_callback(0.0, msg)
+    #     return msg, None
 
-    if not pdf_file_obj:
-        msg = "Error: No PDF file provided."
+    if not pdf_file_obj or not hasattr(pdf_file_obj, 'name') or not os.path.exists(pdf_file_obj.name):
+        msg = "Error: Invalid or missing PDF file."
         logging.error(msg)
-        progress_callback(msg)
+        progress_callback(0.0, msg) # Progreso 0%
         return msg, None
 
     original_filename = os.path.basename(pdf_file_obj.name)
     logging.info(f"Processing file: {original_filename}")
 
-    # Guardar el archivo subido a una ruta temporal permanente (PyMuPDF la necesita)
     temp_pdf_path = None
     pdf_doc = None
     pages = []
     temp_page_files = [] # Para guardar rutas de PDFs temporales de Markitdown
 
     try:
-        # Crear un archivo temporal con extensión .pdf
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf", prefix="anypdf2md_") as temp_file:
-            temp_pdf_path = temp_file.name
-            # Copiar contenido del objeto de Gradio al archivo temporal
-            with open(pdf_file_obj.name, 'rb') as source_f:
-                temp_file.write(source_f.read())
-        logging.info(f"PDF saved temporarily to: {temp_pdf_path}")
+        # Usar directamente la ruta del archivo temporal de Gradio si es posible
+        # Gradio con type="filepath" ya lo guarda en una ruta temporal accesible
+        temp_pdf_path = pdf_file_obj.name
+        logging.info(f"Using temporary PDF path from Gradio: {temp_pdf_path}")
 
         # --- Cargar Prompts ---
         prompts = config.get_prompts()
-        if not prompts:
-             msg = "Error: Could not load prompt templates."
-             progress_callback(msg)
+        if not prompts or not all(k in prompts for k in config.PROMPT_FILES.keys()):
+             msg = "Error: Could not load all required prompt templates. Check the 'prompts' directory."
+             progress_callback(0.0, msg) # Progreso 0%
              logging.error(msg)
              return msg, None
 
         # --- Generar Resumen (Opcional) ---
         pdf_summary = None
+        summary_progress = 0.05 # Asignar un pequeño % al resumen
         if cfg.get("use_summary"):
-            progress_callback(f"Generating summary using {cfg.get('summary_llm_model')}...")
+            progress_callback(summary_progress, f"Generating summary using {cfg.get('summary_llm_model')}...")
             try:
                 pdf_summary = summarizer.generate_summary(
                     temp_pdf_path, api_key, cfg.get("summary_llm_model")
                 )
                 if pdf_summary:
-                    progress_callback("Summary generated.")
+                    progress_callback(summary_progress, "Summary generated.")
                     logging.info("PDF summary generated.")
                 else:
                     # No detener el proceso, solo advertir
-                    progress_callback("Warning: Could not generate summary.")
-                    logging.warning("Failed to generate PDF summary.")
+                    progress_callback(summary_progress, "Warning: Could not generate summary (LLM might have returned empty).")
+                    logging.warning("Failed to generate PDF summary or summary was empty.")
             except Exception as e:
                  # No detener el proceso, solo advertir
                  error_msg = f"Warning: Summary generation failed: {e}"
-                 progress_callback(error_msg)
+                 progress_callback(summary_progress, error_msg)
                  logging.warning(error_msg)
-
+        else:
+            summary_progress = 0.0 # No se hizo resumen, no consume progreso
 
         # --- Procesar PDF ---
-        progress_callback("Analyzing PDF structure...")
+        pdf_load_progress = summary_progress + 0.05 # Otro 5% para cargar/dividir
+        progress_callback(pdf_load_progress, "Analyzing PDF structure...")
         pdf_doc, pages, total_pages = pdf_processor.get_pdf_pages(temp_pdf_path)
-        if not pages:
-            msg = f"Error: Could not process PDF file: {original_filename}"
-            progress_callback(msg)
+
+        if pdf_doc is None or not pages or total_pages == 0:
+            msg = f"Error: Could not process PDF file or PDF is empty: {original_filename}"
+            progress_callback(pdf_load_progress, msg)
             logging.error(msg)
+            if pdf_doc: pdf_doc.close() # Intentar cerrar si se abrió parcialmente
             return msg, None
-        progress_callback(f"PDF has {total_pages} pages. Starting page processing...")
+        progress_callback(pdf_load_progress, f"PDF has {total_pages} pages. Starting page processing...")
 
         # --- Bucle por Página ---
         all_descriptions = []
+        # Distribuir el progreso restante (1.0 - pdf_load_progress) entre las páginas
+        page_processing_progress_start = pdf_load_progress
+        # Dejar un 2% para el final (combinación)
+        total_page_progress_ratio = (0.98 - page_processing_progress_start) if total_pages > 0 else 0
+
         for i, page in enumerate(pages):
             page_num = i + 1
-            progress_callback(f"Processing page {page_num}/{total_pages}...")
+            # Calcular progreso actual basado en la página
+            current_page_ratio = (page_num / total_pages) if total_pages > 0 else 1.0
+            current_progress = page_processing_progress_start + (current_page_ratio * total_page_progress_ratio)
+
+            progress_callback(current_progress, f"Processing page {page_num}/{total_pages}...")
             logging.info(f"Processing page {page_num}/{total_pages}")
 
             page_description = None
@@ -131,7 +142,7 @@ def convert_pdf_to_markdown(
 
             try:
                 # 1. Generar Imagen
-                progress_callback(f"Page {page_num}: Rendering image...")
+                progress_callback(current_progress, f"Page {page_num}: Rendering image...")
                 image_bytes, mime_type = pdf_processor.render_page_to_image_bytes(page, image_format="jpeg") # JPEG suele ser más pequeño
                 if not image_bytes:
                     logging.warning(f"Could not render image for page {page_num}. Skipping VLM call.")
@@ -141,7 +152,7 @@ def convert_pdf_to_markdown(
                 # 2. Procesar Markitdown (Opcional)
                 markdown_context = None
                 if cfg.get("use_markitdown"):
-                    progress_callback(f"Page {page_num}: Extracting text (Markitdown)...")
+                    progress_callback(current_progress, f"Page {page_num}: Extracting text (Markitdown)...")
                     # Guardar página como PDF temporal para Markitdown
                     temp_page_pdf_path = pdf_processor.save_page_as_temp_pdf(pdf_doc, i)
                     if temp_page_pdf_path:
@@ -149,30 +160,29 @@ def convert_pdf_to_markdown(
                         markdown_context = markitdown_processor.get_markdown_for_page_via_temp_pdf(temp_page_pdf_path)
                         if markdown_context is None:
                              logging.warning(f"Markitdown failed for page {page_num}. Proceeding without it.")
-                             progress_callback(f"Page {page_num}: Markitdown extraction failed.")
+                             progress_callback(current_progress, f"Page {page_num}: Markitdown extraction failed.")
                         else:
                              logging.info(f"Markitdown context extracted for page {page_num}.")
+                             # No es necesario callback extra aquí
                     else:
                         logging.warning(f"Could not create temporary PDF for Markitdown on page {page_num}.")
-                        progress_callback(f"Page {page_num}: Failed to prepare for Markitdown.")
+                        progress_callback(current_progress, f"Page {page_num}: Failed to prepare for Markitdown.")
 
 
                 # 3. Construir Prompt VLM
                 prompt_key = "vlm_base"
-                if cfg.get("use_markitdown") and cfg.get("use_summary"):
+                has_markdown = cfg.get("use_markitdown") and markdown_context is not None
+                has_summary = cfg.get("use_summary") and pdf_summary is not None
+
+                if has_markdown and has_summary:
                     prompt_key = "vlm_full"
-                elif cfg.get("use_markitdown"):
+                elif has_markdown:
                     prompt_key = "vlm_markdown"
-                elif cfg.get("use_summary"):
+                elif has_summary:
                     prompt_key = "vlm_summary"
 
                 vlm_prompt_template = prompts.get(prompt_key)
-                if not vlm_prompt_template:
-                    msg = f"Error: VLM prompt template '{prompt_key}' not found."
-                    progress_callback(msg)
-                    logging.error(msg)
-                    # Podríamos intentar continuar con una base o fallar todo
-                    return msg, None
+                # Ya validamos que todos los prompts existen al inicio
 
                 prompt_text = vlm_prompt_template.replace("[PAGE_NUM]", str(page_num))
                 prompt_text = prompt_text.replace("[TOTAL_PAGES]", str(total_pages))
@@ -183,30 +193,32 @@ def convert_pdf_to_markdown(
                     prompt_text = prompt_text.replace("[SUMMARY_CONTEXT]", pdf_summary if pdf_summary else "N/A")
 
                 # 4. Llamar API VLM
-                progress_callback(f"Page {page_num}: Calling VLM ({cfg.get('vlm_model')})...")
+                progress_callback(current_progress, f"Page {page_num}: Calling VLM ({cfg.get('vlm_model')})...")
                 try:
                     page_description = openrouter_client.get_vlm_description(
                         api_key, cfg.get("vlm_model"), prompt_text, image_bytes, mime_type
                     )
                     if page_description:
-                        progress_callback(f"Page {page_num}: Description received.")
+                        # No es necesario un callback aquí, el siguiente bucle lo indicará
                         logging.info(f"VLM description received for page {page_num}.")
                     else:
                         # No detener, pero registrar
                         page_description = f"*Warning: VLM did not return a description for page {page_num}.*"
-                        progress_callback(f"Page {page_num}: VLM returned no description.")
+                        progress_callback(current_progress, f"Page {page_num}: VLM returned no description.")
                         logging.warning(f"VLM returned no description for page {page_num}.")
 
                 except (ValueError, ConnectionError, TimeoutError) as api_err:
                      # Error de API (clave inválida, timeout, conexión, etc.)
                      error_msg = f"API Error on page {page_num}: {api_err}. Aborting."
-                     progress_callback(error_msg)
+                     progress_callback(current_progress, error_msg) # Mostrar error con el progreso actual
                      logging.error(error_msg)
-                     return error_msg, None # Abortar todo el proceso
+                     # Abortar todo el proceso limpiamente
+                     raise ConnectionError(error_msg) # Relanzar para que el finally general limpie
+
                 except Exception as vlm_err:
                      # Error inesperado durante la llamada VLM
                      error_msg = f"Unexpected error during VLM call for page {page_num}: {vlm_err}. Skipping page."
-                     progress_callback(error_msg)
+                     progress_callback(current_progress, error_msg)
                      logging.exception(error_msg) # Log con traceback
                      page_description = f"*Error: Failed to get VLM description for page {page_num} due to an unexpected error.*"
 
@@ -216,7 +228,7 @@ def convert_pdf_to_markdown(
             except Exception as page_err:
                 # Captura errores inesperados dentro del bucle de página
                 error_msg = f"Unexpected error processing page {page_num}: {page_err}. Skipping page."
-                progress_callback(error_msg)
+                progress_callback(current_progress, error_msg)
                 logging.exception(error_msg)
                 all_descriptions.append(f"*Error: An unexpected error occurred while processing page {page_num}.*")
             finally:
@@ -230,22 +242,28 @@ def convert_pdf_to_markdown(
 
 
         # --- Combinar Resultados ---
-        progress_callback("Combining page descriptions into final Markdown...")
+        final_progress = 0.99 # Casi al final
+        progress_callback(final_progress, "Combining page descriptions into final Markdown...")
         final_markdown = format_markdown_output(all_descriptions, original_filename)
         logging.info("Final Markdown content assembled.")
 
         end_time = time.time()
         duration = end_time - start_time
         final_status = f"Conversion completed successfully in {duration:.2f} seconds."
-        progress_callback(final_status)
+        progress_callback(1.0, final_status) # Progreso 100%
         logging.info(final_status)
 
         return final_status, final_markdown
 
+    except (ConnectionError) as critical_api_err:
+        # Captura el error de API relanzado desde el bucle para detener el proceso
+        # El mensaje de error ya se mostró en el progress_callback
+        return str(critical_api_err), None
+
     except Exception as e:
-        # Captura errores fuera del bucle de página (ej. carga inicial PDF, resumen)
+        # Captura errores fuera del bucle de página (ej. carga inicial PDF, resumen, error inesperado)
         error_msg = f"Critical Error during conversion: {e}"
-        progress_callback(error_msg)
+        progress_callback(0.0, error_msg) # Resetear progreso en error crítico
         logging.exception(error_msg) # Log completo con traceback
         return error_msg, None
 
@@ -259,12 +277,13 @@ def convert_pdf_to_markdown(
             except Exception as e:
                  logging.warning(f"Error closing PDF document: {e}")
 
-        if temp_pdf_path and os.path.exists(temp_pdf_path):
-            try:
-                os.remove(temp_pdf_path)
-                logging.info(f"Cleaned up main temporary PDF: {temp_pdf_path}")
-            except OSError as e:
-                logging.warning(f"Could not remove temporary PDF {temp_pdf_path}: {e}")
+        # No necesitamos borrar temp_pdf_path si usamos el de Gradio, Gradio lo gestiona.
+        # if temp_pdf_path and os.path.exists(temp_pdf_path):
+        #     try:
+        #         os.remove(temp_pdf_path)
+        #         logging.info(f"Cleaned up main temporary PDF: {temp_pdf_path}")
+        #     except OSError as e:
+        #         logging.warning(f"Could not remove temporary PDF {temp_pdf_path}: {e}")
 
         # Asegurarse de limpiar archivos de página si hubo error antes del finally del bucle
         for temp_f in temp_page_files:
