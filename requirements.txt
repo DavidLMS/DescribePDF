@@ -1,0 +1,6 @@
+gradio
+pymupdf
+requests
+python-dotenv
+markitdown[pdf]
+pillow
