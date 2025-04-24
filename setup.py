@@ -16,6 +16,7 @@ setup(
         'console_scripts': [
             'describepdf=describepdf.cli:run_cli',
             'describepdf-web=describepdf.ui:launch_app',
+            'describepdf-web-ollama=describepdf.ui_ollama:launch_app',
         ],
     },
     python_requires='>=3.8',

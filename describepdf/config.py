@@ -8,12 +8,18 @@ PROMPTS_DIR = "prompts"
 
 FALLBACK_DEFAULTS = {
     "openrouter_api_key": None,
-    "vlm_model": "qwen/qwen2.5-vl-72b-instruct",
+    "or_vlm_model": "qwen/qwen2.5-vl-72b-instruct",
+    "or_summary_model": "google/gemini-2.5-flash-preview",
+    
+    "ollama_endpoint": "http://localhost:11434",
+    "ollama_vlm_model": "llama3.2-vision",
+    "ollama_summary_model": "qwen2.5",
+    
     "output_language": "English",
     "use_markitdown": False,
-    "use_summary": False,
-    "summary_llm_model": "google/gemini-2.5-flash-preview"
+    "use_summary": False
 }
+
 PROMPT_FILES = {
     "summary": "summary_prompt.md",
     "vlm_base": "vlm_prompt_base.md",
@@ -33,11 +39,16 @@ def load_env_config():
 
     loaded_config = {
         "openrouter_api_key": os.getenv("OPENROUTER_API_KEY") or FALLBACK_DEFAULTS["openrouter_api_key"],
-        "vlm_model": os.getenv("DEFAULT_VLM_MODEL") or FALLBACK_DEFAULTS["vlm_model"],
+        "or_vlm_model": os.getenv("DEFAULT_OR_VLM_MODEL") or FALLBACK_DEFAULTS["or_vlm_model"],
+        "or_summary_model": os.getenv("DEFAULT_OR_SUMMARY_MODEL") or FALLBACK_DEFAULTS["or_summary_model"],
+        
+        "ollama_endpoint": os.getenv("OLLAMA_ENDPOINT") or FALLBACK_DEFAULTS["ollama_endpoint"],
+        "ollama_vlm_model": os.getenv("DEFAULT_OLLAMA_VLM_MODEL") or FALLBACK_DEFAULTS["ollama_vlm_model"],
+        "ollama_summary_model": os.getenv("DEFAULT_OLLAMA_SUMMARY_MODEL") or FALLBACK_DEFAULTS["ollama_summary_model"],
+        
         "output_language": os.getenv("DEFAULT_LANGUAGE") or FALLBACK_DEFAULTS["output_language"],
         "use_markitdown": str(os.getenv("DEFAULT_USE_MARKITDOWN", FALLBACK_DEFAULTS["use_markitdown"])).lower() == 'true',
-        "use_summary": str(os.getenv("DEFAULT_USE_SUMMARY", FALLBACK_DEFAULTS["use_summary"])).lower() == 'true',
-        "summary_llm_model": os.getenv("DEFAULT_SUMMARY_MODEL") or FALLBACK_DEFAULTS["summary_llm_model"]
+        "use_summary": str(os.getenv("DEFAULT_USE_SUMMARY", FALLBACK_DEFAULTS["use_summary"])).lower() == 'true'
     }
 
     app_config = loaded_config
@@ -70,7 +81,6 @@ def load_prompt_templates():
 
 def get_config():
     """Devuelve la configuración cargada actualmente desde .env."""
-    # Asegurarse de que se haya cargado al menos una vez
     if not app_config:
         load_env_config()
     return app_config

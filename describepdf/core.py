@@ -7,6 +7,7 @@ from . import pdf_processor
 from . import markitdown_processor
 from . import summarizer
 from . import openrouter_client
+from . import ollama_client
 
 def format_markdown_output(descriptions: list, original_filename: str):
     """
@@ -46,7 +47,34 @@ def convert_pdf_to_markdown(
     progress_callback(0.0, "Starting conversion process...")
     logging.info("Starting conversion process...")
 
-    api_key = cfg.get("openrouter_api_key")
+    provider = cfg.get("provider", "openrouter").lower()
+    logging.info(f"Using provider: {provider}")
+
+    if provider == "openrouter":
+        api_key = cfg.get("openrouter_api_key")
+        if not api_key:
+            msg = "Error: OpenRouter API Key is missing."
+            logging.error(msg)
+            progress_callback(0.0, msg)
+            return msg, None
+    elif provider == "ollama":
+        ollama_endpoint = cfg.get("ollama_endpoint", "http://localhost:11434")
+        if not ollama_client.OLLAMA_AVAILABLE:
+            msg = "Error: Ollama Python client not installed. Install with 'pip install ollama'."
+            logging.error(msg)
+            progress_callback(0.0, msg)
+            return msg, None
+        
+        if not ollama_client.check_ollama_availability(ollama_endpoint):
+            msg = f"Error: Could not connect to Ollama at {ollama_endpoint}. Make sure it is running."
+            logging.error(msg)
+            progress_callback(0.0, msg)
+            return msg, None
+    else:
+        msg = f"Error: Unknown provider '{provider}'. Use 'openrouter' or 'ollama'."
+        logging.error(msg)
+        progress_callback(0.0, msg)
+        return msg, None
 
     if not pdf_file_obj or not hasattr(pdf_file_obj, 'name') or not os.path.exists(pdf_file_obj.name):
         msg = "Error: Invalid or missing PDF file."
@@ -76,11 +104,18 @@ def convert_pdf_to_markdown(
         pdf_summary = None
         summary_progress = 0.05
         if cfg.get("use_summary"):
-            progress_callback(summary_progress, f"Generating summary using {cfg.get('summary_llm_model')}...")
+            summary_model = cfg.get("summary_llm_model")
+            progress_callback(summary_progress, f"Generating summary using {summary_model}...")
             try:
-                pdf_summary = summarizer.generate_summary(
-                    temp_pdf_path, api_key, cfg.get("summary_llm_model")
-                )
+                if provider == "openrouter":
+                    pdf_summary = summarizer.generate_summary_openrouter(
+                        temp_pdf_path, cfg.get("openrouter_api_key"), summary_model
+                    )
+                elif provider == "ollama":
+                    pdf_summary = summarizer.generate_summary_ollama(
+                        temp_pdf_path, cfg.get("ollama_endpoint"), summary_model
+                    )
+                
                 if pdf_summary:
                     progress_callback(summary_progress, "Summary generated.")
                     logging.info("PDF summary generated.")
@@ -166,11 +201,18 @@ def convert_pdf_to_markdown(
                 if "[SUMMARY_CONTEXT]" in prompt_text:
                     prompt_text = prompt_text.replace("[SUMMARY_CONTEXT]", pdf_summary if pdf_summary else "N/A")
 
-                progress_callback(current_progress, f"Page {page_num}: Calling VLM ({cfg.get('vlm_model')})...")
+                vlm_model = cfg.get("vlm_model")
+                progress_callback(current_progress, f"Page {page_num}: Calling VLM ({vlm_model})...")
                 try:
-                    page_description = openrouter_client.get_vlm_description(
-                        api_key, cfg.get("vlm_model"), prompt_text, image_bytes, mime_type
-                    )
+                    if provider == "openrouter":
+                        page_description = openrouter_client.get_vlm_description(
+                            cfg.get("openrouter_api_key"), vlm_model, prompt_text, image_bytes, mime_type
+                        )
+                    elif provider == "ollama":
+                        page_description = ollama_client.get_vlm_description(
+                            cfg.get("ollama_endpoint"), vlm_model, prompt_text, image_bytes, mime_type
+                        )
+                    
                     if page_description:
                         logging.info(f"VLM description received for page {page_num}.")
                     else:
@@ -178,7 +220,7 @@ def convert_pdf_to_markdown(
                         progress_callback(current_progress, f"Page {page_num}: VLM returned no description.")
                         logging.warning(f"VLM returned no description for page {page_num}.")
 
-                except (ValueError, ConnectionError, TimeoutError) as api_err:
+                except (ValueError, ConnectionError, TimeoutError, ImportError) as api_err:
                      error_msg = f"API Error on page {page_num}: {api_err}. Aborting."
                      progress_callback(current_progress, error_msg)
                      logging.error(error_msg)

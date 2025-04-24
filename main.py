@@ -6,19 +6,23 @@ if __name__ == "__main__":
     logging.info("Starting DescribePDF...")
 
     parser = argparse.ArgumentParser(add_help=False)
-    parser.add_argument('--web', action='store_true', help='Iniciar en modo web con Gradio')
+    parser.add_argument('--web', action='store_true', help='Start in web mode with Gradio (OpenRouter)')
+    parser.add_argument('--web-ollama', action='store_true', help='Start in web mode with Gradio (Ollama local)')
     
     args, _ = parser.parse_known_args()
     
     try:
         if args.web:
-            # Modo interfaz web con Gradio
             from describepdf import ui
-            logging.info("Starting in WEB mode with Gradio interface...")
+            logging.info("Starting in WEB mode with Gradio interface for OpenRouter...")
             app_ui = ui.create_ui()
             app_ui.launch()
+        elif args.web_ollama:
+            from describepdf import ui_ollama
+            logging.info("Starting in WEB mode with Gradio interface for Ollama...")
+            app_ui = ui_ollama.create_ui()
+            app_ui.launch()
         else:
-            # Modo línea de comandos
             from describepdf import cli
             logging.info("Starting in CLI mode...")
             cli.run_cli()
