@@ -63,7 +63,7 @@ def get_vlm_description(endpoint, model, prompt_text, image_bytes, mime_type):
             {
                 'role': 'user',
                 'content': prompt_text,
-                'images': [f"data:{mime_type};base64,{encoded_image}"]
+                'images': [encoded_image]
             }
         ]
         
