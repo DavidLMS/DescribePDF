@@ -1,6 +1,6 @@
-gradio
-pymupdf
-requests
-python-dotenv
-markitdown[pdf]
-pillow
+gradio>=5.20.1
+pymupdf>=1.24.10
+requests>=2.32.3
+python-dotenv>=1.1.0
+markitdown[pdf]>=0.1.1
+pillow>=10.4.0

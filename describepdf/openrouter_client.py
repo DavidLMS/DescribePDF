@@ -4,9 +4,6 @@ import logging
 import json
 
 OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions"
-# Referer y Title pueden ser personalizados
-HTTP_REFERER = "https://github.com/usuario/anypdf2md" # Cambia esto a tu repo si lo tienes
-X_TITLE = "AnyPDF2MD"
 
 def encode_image_to_base64(image_bytes: bytes, mime_type: str):
     """Codifica bytes de imagen a string Base64 para la API."""
@@ -31,13 +28,11 @@ def call_openrouter_api(api_key: str, model: str, messages: list):
     """
     if not api_key:
         logging.error("OpenRouter API Key is missing.")
-        raise ValueError("OpenRouter API Key is missing.") # Lanzar error para detener el proceso
+        raise ValueError("OpenRouter API Key is missing.")
 
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
-        "HTTP-Referer": HTTP_REFERER,
-        "X-Title": X_TITLE
     }
     payload = {
         "model": model,
@@ -45,9 +40,9 @@ def call_openrouter_api(api_key: str, model: str, messages: list):
     }
 
     try:
-        logging.debug(f"Calling OpenRouter API. Model: {model}. Messages: {json.dumps(messages)[:200]}...") # Log truncado
-        response = requests.post(OPENROUTER_API_URL, headers=headers, json=payload, timeout=180) # Timeout largo para VLM
-        response.raise_for_status() # Lanza HTTPError para respuestas 4xx/5xx
+        logging.debug(f"Calling OpenRouter API. Model: {model}. Messages: {json.dumps(messages)[:200]}...")
+        response = requests.post(OPENROUTER_API_URL, headers=headers, json=payload, timeout=300)
+        response.raise_for_status()
         logging.debug(f"API call successful. Status: {response.status_code}.")
         return response.json()
 
@@ -56,7 +51,6 @@ def call_openrouter_api(api_key: str, model: str, messages: list):
         raise TimeoutError(f"API call timed out for model {model}.")
     except requests.exceptions.RequestException as e:
         logging.error(f"API call failed for model {model}. Status: {e.response.status_code if e.response else 'N/A'}. Response: {e.response.text if e.response else 'No response'}")
-        # Intentar extraer mensaje de error de OpenRouter si es posible
         error_message = f"API Error: {e}"
         if e.response is not None:
             try:
@@ -64,11 +58,11 @@ def call_openrouter_api(api_key: str, model: str, messages: list):
                 if 'error' in error_details and 'message' in error_details['error']:
                     error_message = f"API Error ({e.response.status_code}): {error_details['error']['message']}"
                 else:
-                     error_message = f"API Error ({e.response.status_code}): {e.response.text[:200]}" # Truncar respuesta larga
+                     error_message = f"API Error ({e.response.status_code}): {e.response.text[:200]}"
             except json.JSONDecodeError:
                  error_message = f"API Error ({e.response.status_code}): {e.response.text[:200]}"
 
-        raise ConnectionError(error_message) # Lanzar error más específico
+        raise ConnectionError(error_message)
 
 def get_vlm_description(api_key: str, model: str, prompt_text: str, image_bytes: bytes, mime_type: str):
     """
@@ -86,7 +80,7 @@ def get_vlm_description(api_key: str, model: str, prompt_text: str, image_bytes:
     """
     base64_image = encode_image_to_base64(image_bytes, mime_type)
     if not base64_image:
-        return None # Error ya logueado en encode_image
+        return None
 
     messages = [
         {
@@ -104,11 +98,10 @@ def get_vlm_description(api_key: str, model: str, prompt_text: str, image_bytes:
     try:
         response_json = call_openrouter_api(api_key, model, messages)
         if response_json and 'choices' in response_json and len(response_json['choices']) > 0:
-            # Asumiendo que la respuesta está en choices[0].message.content
             content = response_json['choices'][0].get('message', {}).get('content')
             if content:
                  logging.info(f"Received VLM description for page (model: {model}).")
-                 return str(content) # Asegurar que sea string
+                 return str(content)
             else:
                  logging.warning(f"VLM response structure unexpected or content empty: {response_json}")
                  return None
@@ -116,12 +109,10 @@ def get_vlm_description(api_key: str, model: str, prompt_text: str, image_bytes:
             logging.warning(f"VLM response JSON structure unexpected: {response_json}")
             return None
     except (ValueError, ConnectionError, TimeoutError) as e:
-        # Errores ya logueados en call_openrouter_api o por la validación de API Key
-        # Relanzar para que el core lo maneje
         raise e
     except Exception as e:
         logging.error(f"Unexpected error getting VLM description: {e}")
-        raise e # Relanzar
+        raise e
 
 def get_llm_summary(api_key: str, model: str, prompt_text: str):
     """
@@ -153,7 +144,7 @@ def get_llm_summary(api_key: str, model: str, prompt_text: str):
             logging.warning(f"LLM summary response JSON structure unexpected: {response_json}")
             return None
     except (ValueError, ConnectionError, TimeoutError) as e:
-        raise e # Relanzar
+        raise e
     except Exception as e:
         logging.error(f"Unexpected error getting LLM summary: {e}")
-        raise e # Relanzar
+        raise e

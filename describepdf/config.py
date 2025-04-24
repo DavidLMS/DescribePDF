@@ -4,11 +4,10 @@ from dotenv import load_dotenv
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-# --- Constantes ---
 PROMPTS_DIR = "prompts"
-# Valores por defecto si no se encuentran en .env
+
 FALLBACK_DEFAULTS = {
-    "openrouter_api_key": None, # No hay fallback seguro para la API key
+    "openrouter_api_key": None,
     "vlm_model": "qwen/qwen2.5-vl-72b-instruct",
     "output_language": "English",
     "use_markitdown": False,
@@ -23,24 +22,19 @@ PROMPT_FILES = {
     "vlm_full": "vlm_prompt_full.md"
 }
 
-# --- Variables Globales ---
 app_config = {}
 prompt_templates = {}
 
-# --- Funciones ---
 def load_env_config():
     """Carga la configuración exclusivamente desde variables de entorno (.env)."""
     global app_config
 
     load_dotenv()
 
-    # Leer variables de entorno o usar fallbacks
     loaded_config = {
         "openrouter_api_key": os.getenv("OPENROUTER_API_KEY") or FALLBACK_DEFAULTS["openrouter_api_key"],
         "vlm_model": os.getenv("DEFAULT_VLM_MODEL") or FALLBACK_DEFAULTS["vlm_model"],
         "output_language": os.getenv("DEFAULT_LANGUAGE") or FALLBACK_DEFAULTS["output_language"],
-        # Los booleanos necesitan un manejo un poco más cuidadoso desde .env
-        # Asumimos que si la variable existe y es 'true' (insensible a mayúsculas), es True.
         "use_markitdown": str(os.getenv("DEFAULT_USE_MARKITDOWN", FALLBACK_DEFAULTS["use_markitdown"])).lower() == 'true',
         "use_summary": str(os.getenv("DEFAULT_USE_SUMMARY", FALLBACK_DEFAULTS["use_summary"])).lower() == 'true',
         "summary_llm_model": os.getenv("DEFAULT_SUMMARY_MODEL") or FALLBACK_DEFAULTS["summary_llm_model"]
@@ -49,7 +43,7 @@ def load_env_config():
     app_config = loaded_config
     logging.info("Configuration loaded from environment variables.")
     log_config = app_config.copy()
-    log_config.pop("openrouter_api_key", None) # No loguear la key
+    log_config.pop("openrouter_api_key", None)
     logging.debug(f"Effective configuration (excluding API key): {log_config}")
     return app_config
 
@@ -59,7 +53,7 @@ def load_prompt_templates():
     templates = {}
     if not os.path.isdir(PROMPTS_DIR):
         logging.error(f"Prompts directory '{PROMPTS_DIR}' not found.")
-        return templates # Devuelve vacío, la app fallará más adelante si los necesita
+        return templates
 
     for key, filename in PROMPT_FILES.items():
         filepath = os.path.join(PROMPTS_DIR, filename)
@@ -87,7 +81,5 @@ def get_prompts():
         load_prompt_templates()
     return prompt_templates
 
-# --- Carga Inicial ---
-# Cargar configuración y prompts cuando el módulo se importa por primera vez
 load_env_config()
 load_prompt_templates()

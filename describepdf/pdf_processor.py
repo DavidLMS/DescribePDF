@@ -19,8 +19,6 @@ def get_pdf_pages(pdf_path):
         doc = pymupdf.open(pdf_path)
         pages = [doc.load_page(i) for i in range(len(doc))]
         total_pages = len(doc)
-        # No cerramos el doc aquí, las páginas dependen de él.
-        # Se debe cerrar después de procesar todas las páginas.
         logging.info(f"Opened PDF '{os.path.basename(pdf_path)}' with {total_pages} pages.")
         return doc, pages, total_pages
     except Exception as e:
@@ -48,7 +46,6 @@ def render_page_to_image_bytes(page: pymupdf.Page, image_format="jpeg", dpi=150)
             img_bytes_io.write(img_bytes)
             mime_type = "image/png"
         elif image_format.lower() == "jpeg":
-            # PyMuPDF no guarda directo a JPEG en bytes, usamos Pillow
             img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
             img.save(img_bytes_io, format="JPEG")
             mime_type = "image/jpeg"
@@ -80,7 +77,7 @@ def extract_all_text(pdf_path):
         all_text = ""
         for page_num in range(len(doc)):
             page = doc.load_page(page_num)
-            all_text += page.get_text("text") + "\n\n" # Añadir separador
+            all_text += page.get_text("text") + "\n\n" #
         logging.info(f"Extracted text from all pages of '{os.path.basename(pdf_path)}'.")
         return all_text
     except Exception as e:
@@ -104,12 +101,11 @@ def save_page_as_temp_pdf(original_doc: pymupdf.Document, page_num: int):
     temp_pdf = None
     new_doc = None
     try:
-        # Crear un archivo temporal nombrado para que markitdown pueda leerlo
         temp_pdf_file = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
         temp_pdf_path = temp_pdf_file.name
-        temp_pdf_file.close() # Cerrar para que pymupdf pueda escribir
+        temp_pdf_file.close()
 
-        new_doc = pymupdf.open()  # Nuevo documento vacío
+        new_doc = pymupdf.open()
         new_doc.insert_pdf(original_doc, from_page=page_num, to_page=page_num)
         new_doc.save(temp_pdf_path)
         logging.debug(f"Saved page {page_num + 1} to temporary PDF: {temp_pdf_path}")
@@ -117,7 +113,7 @@ def save_page_as_temp_pdf(original_doc: pymupdf.Document, page_num: int):
     except Exception as e:
         logging.error(f"Error saving page {page_num + 1} as temporary PDF: {e}")
         if temp_pdf_path and os.path.exists(temp_pdf_path):
-            os.remove(temp_pdf_path) # Limpiar si falla
+            os.remove(temp_pdf_path)
         return None
     finally:
         if new_doc:

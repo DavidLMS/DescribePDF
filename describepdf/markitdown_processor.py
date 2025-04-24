@@ -2,7 +2,6 @@ from markitdown import MarkItDown
 import logging
 import os
 
-# Inicializar MarkItDown una vez
 try:
     md_converter = MarkItDown()
     logging.info("MarkItDown initialized.")
