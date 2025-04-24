@@ -1,7 +1,7 @@
 import logging
 import base64
-from io import BytesIO
 import requests
+from ollama import Client
 
 try:
     import ollama
@@ -53,7 +53,9 @@ def get_vlm_description(endpoint, model, prompt_text, image_bytes, mime_type):
         raise ImportError("Ollama Python client not installed. Install with 'pip install ollama'")
     
     try:
-        ollama.client._host = endpoint.rstrip('/')
+        client = Client(
+            host=endpoint.rstrip('/')
+        )
         
         encoded_image = base64.b64encode(image_bytes).decode('utf-8')
         
@@ -67,7 +69,7 @@ def get_vlm_description(endpoint, model, prompt_text, image_bytes, mime_type):
         
         logging.info(f"Calling Ollama VLM model: {model}")
         
-        response = ollama.chat(
+        response = client.chat(
             model=model,
             messages=messages
         )
@@ -100,7 +102,9 @@ def get_llm_summary(endpoint, model, prompt_text):
         raise ImportError("Ollama Python client not installed. Install with 'pip install ollama'")
     
     try:
-        ollama.client._host = endpoint.rstrip('/')
+        client = Client(
+            host=endpoint.rstrip('/')
+        )
         
         messages = [
             {
@@ -111,7 +115,7 @@ def get_llm_summary(endpoint, model, prompt_text):
         
         logging.info(f"Calling Ollama LLM model for summary: {model}")
         
-        response = ollama.chat(
+        response = client.chat(
             model=model,
             messages=messages
         )
