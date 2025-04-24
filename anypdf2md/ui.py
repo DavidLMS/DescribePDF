@@ -121,6 +121,7 @@ def create_ui():
     initial_lang = initial_env_config.get("output_language")
     initial_use_md = initial_env_config.get("use_markitdown")
     initial_use_sum = initial_env_config.get("use_summary")
+    initial_api_key = initial_env_config.get("openrouter_api_key")
 
 
     with gr.Blocks(theme=gr.themes.Soft(), title="AnyPDF2MD") as iface:
@@ -152,10 +153,10 @@ def create_ui():
                     "Defaults are controlled by the `.env` file."
                 )
                 api_key_input = gr.Textbox(
-                    label="OpenRouter API Key (Optional Override)",
+                    label="OpenRouter API Key",
                     type="password",
-                    placeholder="Leave blank to use key from .env file",
-                    value="" # Siempre vacío al inicio
+                    placeholder="Using key from .env (if set). Enter value here to override for this run.",
+                    value=initial_api_key
                 )
                 vlm_model_input = gr.Dropdown(
                     label="VLM Model", choices=suggested_vlms,
