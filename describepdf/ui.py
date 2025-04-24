@@ -12,8 +12,10 @@ def generate(pdf_file_obj, ui_api_key, ui_vlm_model, ui_lang, ui_use_md, ui_use_
 
     env_config = config.get_config()
 
+    api_key = ui_api_key if ui_api_key.strip() else env_config.get("openrouter_api_key")
+
     current_run_config = {
-        "openrouter_api_key": ui_api_key if ui_api_key else env_config.get("openrouter_api_key"),
+        "openrouter_api_key": api_key,
         "vlm_model": ui_vlm_model,
         "output_language": ui_lang,
         "use_markitdown": ui_use_md,
@@ -86,8 +88,8 @@ def create_ui():
     initial_lang = initial_env_config.get("output_language")
     initial_use_md = initial_env_config.get("use_markitdown")
     initial_use_sum = initial_env_config.get("use_summary")
-    initial_api_key = initial_env_config.get("openrouter_api_key")
-
+    
+    has_env_api_key = bool(initial_env_config.get("openrouter_api_key"))
 
     with gr.Blocks(theme=gr.themes.Soft(), title="DescribePDF") as iface:
         gr.Markdown("# DescribePDF - Visual PDF to Markdown extensive description")
@@ -118,10 +120,10 @@ def create_ui():
                     "Defaults are controlled by the `.env` file."
                 )
                 api_key_input = gr.Textbox(
-                    label="OpenRouter API Key",
+                    label="OpenRouter API Key" + (" (set in .env)" if has_env_api_key else ""),
                     type="password",
-                    placeholder="Using key from .env (if set). Enter value here to override for this run.",
-                    value=initial_api_key
+                    placeholder="Enter an API key here to override the one in .env" if has_env_api_key else "Enter your OpenRouter API key",
+                    value=""
                 )
                 vlm_model_input = gr.Dropdown(
                     label="VLM Model", choices=suggested_vlms,
