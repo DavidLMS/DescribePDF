@@ -156,3 +156,61 @@ optional arguments:
                         Modelo para generar el resumen
   -v, --verbose         Modo detallado (muestra mensajes de depuración)
 ```
+
+## Testing
+
+The project includes a comprehensive test suite using pytest. The tests cover unit tests for individual components as well as integration tests for the core functionality.
+
+### Setup Testing Environment
+
+To set up the testing environment, install the required testing dependencies:
+
+```bash
+pip install -r test_requirements.txt
+```
+
+### Running Tests
+
+To run all tests:
+
+```bash
+pytest
+```
+
+To run tests with coverage report:
+
+```bash
+pytest --cov=describepdf tests/
+```
+
+To run a specific test file:
+
+```bash
+pytest tests/test_pdf_processor.py
+```
+
+### Test Structure
+
+The tests are organized in the following structure:
+
+```
+tests/
+├── __init__.py
+├── conftest.py              # Shared fixtures and test configuration
+├── test_pdf_processor.py    # Tests for PDF processing functionality
+├── test_markitdown.py       # Tests for Markitdown integration
+├── test_openrouter_client.py # Tests for OpenRouter API client
+├── test_ollama_client.py    # Tests for Ollama API client
+├── test_summarizer.py       # Tests for document summary functionality
+├── test_core.py             # Tests for core conversion logic
+└── test_cli.py              # Tests for command line interface
+```
+
+### Mocking External Dependencies
+
+The tests use pytest-mock and the responses library to mock external dependencies like:
+- PDF rendering (PyMuPDF)
+- API calls to OpenRouter and Ollama
+- File system operations
+
+This ensures tests can run without requiring actual PDFs or API keys.

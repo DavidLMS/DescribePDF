@@ -2,3 +2,4 @@
 .DS_Store
 /describepdf/__pycache__
 /describepdf.egg-info
+/tests/__pycache__
