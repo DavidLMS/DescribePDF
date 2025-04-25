@@ -54,6 +54,7 @@ def main(args: Optional[List[str]] = None) -> int:
             logger.info("Starting in WEB mode with Gradio interface for OpenRouter...")
             app_ui = ui.create_ui()
             app_ui.launch()
+            logger.info("Web UI stopped.")
             return 0
             
         elif parsed_args.web_ollama:
@@ -62,6 +63,7 @@ def main(args: Optional[List[str]] = None) -> int:
             logger.info("Starting in WEB mode with Gradio interface for Ollama...")
             app_ui = ui_ollama.create_ui()
             app_ui.launch()
+            logger.info("Web UI (Ollama) stopped.")
             return 0
             
         else:
@@ -86,5 +88,4 @@ def main(args: Optional[List[str]] = None) -> int:
 
 if __name__ == "__main__":
     exit_code = main()
-    logger.info(f"DescribePDF application stopped with code {exit_code}.")
     sys.exit(exit_code)

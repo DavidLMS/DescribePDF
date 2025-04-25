@@ -8,13 +8,15 @@ import os
 import logging
 from typing import Dict, Any
 from dotenv import load_dotenv
+import pathlib
 
 # Setup central logging configuration
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - [%(module)s] - %(message)s')
 logger = logging.getLogger('describepdf')
 
-# Directory containing prompt templates
-PROMPTS_DIR = "prompts"
+# Directory containing prompt templates (making path absolute by using current file location)
+SCRIPT_DIR = pathlib.Path(__file__).parent.parent.absolute()
+PROMPTS_DIR = os.path.join(SCRIPT_DIR, "prompts")
 
 # Default configuration values
 DEFAULT_CONFIG = {
@@ -58,19 +60,36 @@ def load_env_config() -> Dict[str, Any]:
 
     load_dotenv()
 
-    loaded_config = {
-        "openrouter_api_key": os.getenv("OPENROUTER_API_KEY", DEFAULT_CONFIG["openrouter_api_key"]),
-        "or_vlm_model": os.getenv("DEFAULT_OR_VLM_MODEL", DEFAULT_CONFIG["or_vlm_model"]),
-        "or_summary_model": os.getenv("DEFAULT_OR_SUMMARY_MODEL", DEFAULT_CONFIG["or_summary_model"]),
+    # Start with the default config
+    loaded_config = DEFAULT_CONFIG.copy()
+    
+    # Override defaults with environment variables if present
+    if os.getenv("OPENROUTER_API_KEY"):
+        loaded_config["openrouter_api_key"] = os.getenv("OPENROUTER_API_KEY")
         
-        "ollama_endpoint": os.getenv("OLLAMA_ENDPOINT", DEFAULT_CONFIG["ollama_endpoint"]),
-        "ollama_vlm_model": os.getenv("DEFAULT_OLLAMA_VLM_MODEL", DEFAULT_CONFIG["ollama_vlm_model"]),
-        "ollama_summary_model": os.getenv("DEFAULT_OLLAMA_SUMMARY_MODEL", DEFAULT_CONFIG["ollama_summary_model"]),
+    if os.getenv("DEFAULT_OR_VLM_MODEL"):
+        loaded_config["or_vlm_model"] = os.getenv("DEFAULT_OR_VLM_MODEL")
         
-        "output_language": os.getenv("DEFAULT_LANGUAGE", DEFAULT_CONFIG["output_language"]),
-        "use_markitdown": str(os.getenv("DEFAULT_USE_MARKITDOWN", str(DEFAULT_CONFIG["use_markitdown"]))).lower() == 'true',
-        "use_summary": str(os.getenv("DEFAULT_USE_SUMMARY", str(DEFAULT_CONFIG["use_summary"]))).lower() == 'true'
-    }
+    if os.getenv("DEFAULT_OR_SUMMARY_MODEL"):
+        loaded_config["or_summary_model"] = os.getenv("DEFAULT_OR_SUMMARY_MODEL")
+        
+    if os.getenv("OLLAMA_ENDPOINT"):
+        loaded_config["ollama_endpoint"] = os.getenv("OLLAMA_ENDPOINT")
+        
+    if os.getenv("DEFAULT_OLLAMA_VLM_MODEL"):
+        loaded_config["ollama_vlm_model"] = os.getenv("DEFAULT_OLLAMA_VLM_MODEL")
+        
+    if os.getenv("DEFAULT_OLLAMA_SUMMARY_MODEL"):
+        loaded_config["ollama_summary_model"] = os.getenv("DEFAULT_OLLAMA_SUMMARY_MODEL")
+        
+    if os.getenv("DEFAULT_LANGUAGE"):
+        loaded_config["output_language"] = os.getenv("DEFAULT_LANGUAGE")
+        
+    if os.getenv("DEFAULT_USE_MARKITDOWN"):
+        loaded_config["use_markitdown"] = str(os.getenv("DEFAULT_USE_MARKITDOWN")).lower() == 'true'
+        
+    if os.getenv("DEFAULT_USE_SUMMARY"):
+        loaded_config["use_summary"] = str(os.getenv("DEFAULT_USE_SUMMARY")).lower() == 'true'
 
     _app_config = loaded_config
     logger.info("Configuration loaded from environment variables.")

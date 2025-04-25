@@ -11,20 +11,33 @@ from typing import Optional
 # Get logger from config module
 from .config import logger
 
-# Try to import MarkItDown, but handle gracefully if it's not available
+# Check if MarkItDown is available
 try:
     from markitdown import MarkItDown
-    md_converter = MarkItDown()
-    logger.info("MarkItDown initialized successfully.")
     MARKITDOWN_AVAILABLE = True
 except ImportError:
     logger.warning("MarkItDown library not installed. Install with 'pip install markitdown[pdf]'")
-    md_converter = None
     MARKITDOWN_AVAILABLE = False
 except Exception as e:
     logger.error(f"Failed to initialize MarkItDown: {e}")
-    md_converter = None
     MARKITDOWN_AVAILABLE = False
+
+def _get_markdown_converter():
+    """
+    Initialize and return a MarkItDown converter instance.
+    
+    Returns:
+        MarkItDown: An initialized MarkItDown converter or None if not available
+    """
+    if not MARKITDOWN_AVAILABLE:
+        return None
+        
+    try:
+        converter = MarkItDown()
+        return converter
+    except Exception as e:
+        logger.error(f"Failed to initialize MarkItDown converter: {e}")
+        return None
 
 def get_markdown_for_page_via_temp_pdf(temp_pdf_path: str) -> Optional[str]:
     """
@@ -36,7 +49,7 @@ def get_markdown_for_page_via_temp_pdf(temp_pdf_path: str) -> Optional[str]:
     Returns:
         str: Extracted Markdown content, or None if there was an error
     """
-    if not MARKITDOWN_AVAILABLE or not md_converter:
+    if not MARKITDOWN_AVAILABLE:
         logger.error("MarkItDown converter is not available.")
         return None
         
@@ -45,6 +58,10 @@ def get_markdown_for_page_via_temp_pdf(temp_pdf_path: str) -> Optional[str]:
         return None
 
     try:
+        md_converter = _get_markdown_converter()
+        if not md_converter:
+            return None
+            
         result = md_converter.convert(temp_pdf_path)
         logger.debug(f"Extracted Markdown from temporary PDF: {temp_pdf_path}")
         return result.text_content if result else ""

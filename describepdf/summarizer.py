@@ -75,6 +75,7 @@ def generate_summary(
 
     # Call LLM for summary based on provider
     try:
+        # Handle OpenRouter provider
         if provider == "openrouter":
             if not api_key:
                 logger.error("OpenRouter API key is required for OpenRouter provider.")
@@ -88,7 +89,8 @@ def generate_summary(
             else:
                 logger.error("OpenRouter LLM call for summary returned no content.")
                 return None
-                
+        
+        # Handle Ollama provider
         elif provider == "ollama":
             if not ollama_endpoint:
                 logger.error("Ollama endpoint URL is required for Ollama provider.")
@@ -102,14 +104,24 @@ def generate_summary(
             else:
                 logger.error("Ollama LLM call for summary returned no content.")
                 return None
-                
+        
+        # Handle unsupported provider        
         else:
             logger.error(f"Unsupported provider: {provider}")
             return None
             
-    except (ValueError, ConnectionError, TimeoutError, ImportError) as e:
-        logger.error(f"Failed to generate summary due to API error: {e}")
+    except ValueError as e:
+        logger.error(f"Value error during summary generation: {e}")
+        return None
+    except ConnectionError as e:
+        logger.error(f"Connection error during summary generation: {e}")
+        return None
+    except TimeoutError as e:
+        logger.error(f"Timeout error during summary generation: {e}")
+        return None
+    except ImportError as e:
+        logger.error(f"Import error during summary generation: {e}")
         return None
     except Exception as e:
-        logger.error(f"Unexpected error during summary generation: {e}")
-        return None
+        logger.critical(f"Critical unexpected error during summary generation: {e}", exc_info=True)
+        raise

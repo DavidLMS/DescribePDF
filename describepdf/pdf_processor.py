@@ -152,10 +152,10 @@ def save_page_as_temp_pdf(original_doc: pymupdf.Document, page_num: int) -> Opti
     temp_pdf_path = None
     
     try:
-        # Create a temporary file with a proper naming pattern that includes our app name
-        fd, temp_pdf_path = tempfile.mkstemp(suffix=".pdf", prefix="describepdf_page_")
-        os.close(fd)  # Close the file descriptor immediately as we'll use the path
-
+        # Create a temporary file with a proper naming pattern
+        with tempfile.NamedTemporaryFile(suffix=".pdf", prefix="describepdf_page_", delete=False) as tmp_file:
+            temp_pdf_path = tmp_file.name
+        
         # Create new document with the single page
         new_doc = pymupdf.open()
         new_doc.insert_pdf(original_doc, from_page=page_num, to_page=page_num)
