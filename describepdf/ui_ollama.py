@@ -16,6 +16,12 @@ from . import config
 from . import core
 from . import ollama_client
 
+theme = gr.themes.Soft(
+    primary_hue="red",
+    secondary_hue="rose",
+    spacing_size="lg",
+)
+
 def generate(
     pdf_file_obj: Optional[gr.File], 
     ollama_endpoint: str, 
@@ -150,12 +156,12 @@ def create_ui() -> gr.Blocks:
     initial_use_sum = initial_env_config.get("use_summary", False)
 
     # Create the Gradio interface
-    with gr.Blocks(title="DescribePDF - Ollama") as iface:
-        gr.Markdown("# DescribePDF with Ollama - PDF to Markdown using local models")
+    with gr.Blocks(title="DescribePDF", theme=theme) as iface:
+        gr.Markdown("# DescribePDF - PDF to Markdown using local models")
         gr.Markdown(
             "This application converts PDF files into Markdown format using a local Vision Language Model (VLM) "
             "through Ollama to describe each page's content.\n"
-            "Upload a PDF, adjust settings (optional), and click 'Convert to MD'. "
+            "Upload a PDF, adjust settings, and click 'Describe'. "
             "Default settings are loaded from the `.env` file on startup. Settings chosen here apply only to the current conversion."
         )
 
@@ -170,7 +176,7 @@ def create_ui() -> gr.Blocks:
                             type="filepath"
                         )
                         convert_button = gr.Button(
-                            "Convert to Markdown", 
+                            "Describe", 
                             variant="primary"
                         )
                         progress_output = gr.Textbox(
@@ -188,7 +194,7 @@ def create_ui() -> gr.Blocks:
                         markdown_output = gr.Markdown(label="Result (Markdown)")
 
             # Configuration tab
-            with gr.TabItem("Configuration", id=1):
+            with gr.TabItem("Settings", id=1):
                 gr.Markdown(
                     "Adjust settings for the *next* generation. These settings are **not** saved. "
                     "Defaults are controlled by the `.env` file."
