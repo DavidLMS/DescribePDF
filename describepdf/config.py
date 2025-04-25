@@ -42,6 +42,12 @@ PROMPT_FILES = {
     "vlm_full": "vlm_prompt_full.md"
 }
 
+# Cache for loaded configuration
+_CONFIG_CACHE = None
+
+# Cache for loaded prompts
+_PROMPTS_CACHE = None
+
 def load_env_config() -> Dict[str, Any]:
     """
     Load configuration from environment variables (.env file).
@@ -128,23 +134,48 @@ def get_config() -> Dict[str, Any]:
     """
     Get the configuration from .env.
     
-    This function loads the configuration if it hasn't been loaded yet.
+    This function loads the configuration only once and returns the cached version
+    on subsequent calls, improving efficiency and ensuring consistency.
     
     Returns:
         Dict[str, Any]: Current configuration dictionary
     """
-    return load_env_config()
+    global _CONFIG_CACHE
+    
+    if _CONFIG_CACHE is None:
+        _CONFIG_CACHE = load_env_config()
+        
+    return _CONFIG_CACHE
+
+def reload_config() -> Dict[str, Any]:
+    """
+    Force reload of configuration from .env.
+    
+    This function can be used when configuration needs to be explicitly refreshed.
+    
+    Returns:
+        Dict[str, Any]: Updated configuration dictionary
+    """
+    global _CONFIG_CACHE
+    _CONFIG_CACHE = load_env_config()
+    return _CONFIG_CACHE
 
 def get_prompts() -> Dict[str, str]:
     """
     Get the prompt templates.
     
-    This function loads the prompt templates if they haven't been loaded yet.
+    This function loads the prompt templates only once and returns the cached version
+    on subsequent calls, improving efficiency.
     
     Returns:
         Dict[str, str]: Dictionary with loaded prompt templates
     """
-    return load_prompt_templates()
+    global _PROMPTS_CACHE
+    
+    if _PROMPTS_CACHE is None:
+        _PROMPTS_CACHE = load_prompt_templates()
+        
+    return _PROMPTS_CACHE
 
 def get_required_prompts_for_config(cfg: Dict[str, Any]) -> Dict[str, str]:
     """

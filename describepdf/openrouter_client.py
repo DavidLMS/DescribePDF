@@ -9,7 +9,7 @@ import requests
 import base64
 import json
 import logging
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, List
 
 # Get logger from config module
 logger = logging.getLogger('describepdf')

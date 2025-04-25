@@ -8,7 +8,6 @@ VLM (Vision Language Model) image description and LLM text summarization.
 import logging
 import base64
 import requests
-from urllib.parse import urljoin
 
 # Try to import Ollama, but handle gracefully if it's not available
 try:
