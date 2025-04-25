@@ -7,9 +7,12 @@ VLM (Vision Language Model) image description and LLM text summarization.
 
 import requests
 import base64
-import logging
 import json
+import logging
 from typing import Dict, Any, Optional, List
+
+# Get logger from config module
+logger = logging.getLogger('describepdf')
 
 # Constants
 OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions"
@@ -30,7 +33,7 @@ def encode_image_to_base64(image_bytes: bytes, mime_type: str) -> Optional[str]:
         encoded = base64.b64encode(image_bytes).decode('utf-8')
         return f"data:{mime_type};base64,{encoded}"
     except Exception as e:
-        logging.error(f"Error encoding image to Base64: {e}")
+        logger.error(f"Error encoding image to Base64: {e}")
         return None
 
 def call_openrouter_api(api_key: str, model: str, messages: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
@@ -51,7 +54,7 @@ def call_openrouter_api(api_key: str, model: str, messages: List[Dict[str, Any]]
         TimeoutError: If API call times out
     """
     if not api_key:
-        logging.error("OpenRouter API Key is missing.")
+        logger.error("OpenRouter API Key is missing.")
         raise ValueError("OpenRouter API Key is missing.")
 
     headers = {
@@ -67,7 +70,7 @@ def call_openrouter_api(api_key: str, model: str, messages: List[Dict[str, Any]]
     try:
         # Log API call (without full message content for privacy/size)
         msg_log = json.dumps(messages)[:200] + ("..." if len(json.dumps(messages)) > 200 else "")
-        logging.debug(f"Calling OpenRouter API. Model: {model}. Messages: {msg_log}")
+        logger.debug(f"Calling OpenRouter API. Model: {model}. Messages: {msg_log}")
         
         # Make API request
         response = requests.post(
@@ -78,18 +81,18 @@ def call_openrouter_api(api_key: str, model: str, messages: List[Dict[str, Any]]
         )
         response.raise_for_status()
         
-        logging.debug(f"API call successful. Status: {response.status_code}.")
+        logger.debug(f"API call successful. Status: {response.status_code}.")
         return response.json()
 
     except requests.exceptions.Timeout:
-        logging.error(f"API call timed out for model {model}.")
+        logger.error(f"API call timed out for model {model}.")
         raise TimeoutError(f"API call timed out for model {model}.")
         
     except requests.exceptions.RequestException as e:
-        # Log error details
-        status_code = e.response.status_code if hasattr(e, 'response') and e.response else 'N/A'
-        response_text = e.response.text if hasattr(e, 'response') and e.response else 'No response'
-        logging.error(f"API call failed for model {model}. Status: {status_code}. Response: {response_text}")
+        # Log error details without assuming response exists
+        status_code = getattr(e.response, 'status_code', 'N/A') if hasattr(e, 'response') else 'N/A'
+        response_text = getattr(e.response, 'text', 'No response') if hasattr(e, 'response') else 'No response'
+        logger.error(f"API call failed for model {model}. Status: {status_code}. Response: {response_text}")
         
         # Extract error message from response if possible
         error_message = f"API Error: {e}"
@@ -148,22 +151,25 @@ def get_vlm_description(api_key: str, model: str, prompt_text: str, image_bytes:
         response_json = call_openrouter_api(api_key, model, messages)
         
         # Process response
-        if response_json and 'choices' in response_json and len(response_json['choices']) > 0:
-            content = response_json['choices'][0].get('message', {}).get('content')
-            if content:
-                logging.info(f"Received VLM description for page (model: {model}).")
-                return str(content)
-            else:
-                logging.warning(f"VLM response structure unexpected or content empty: {response_json}")
-                return None
+        if response_json and 'choices' in response_json and response_json['choices']:
+            if len(response_json['choices']) > 0:
+                message = response_json['choices'][0].get('message', {})
+                if message and 'content' in message:
+                    content = message.get('content')
+                    if content:
+                        logger.info(f"Received VLM description for page (model: {model}).")
+                        return str(content)
+                    
+            logger.warning(f"VLM response structure unexpected or content empty.")
+            return None
         else:
-            logging.warning(f"VLM response JSON structure unexpected: {response_json}")
+            logger.warning(f"VLM response JSON structure unexpected: {response_json}")
             return None
             
     except (ValueError, ConnectionError, TimeoutError) as e:
         raise e
     except Exception as e:
-        logging.error(f"Unexpected error getting VLM description: {e}")
+        logger.error(f"Unexpected error getting VLM description: {e}")
         raise e
 
 def get_llm_summary(api_key: str, model: str, prompt_text: str) -> Optional[str]:
@@ -193,20 +199,23 @@ def get_llm_summary(api_key: str, model: str, prompt_text: str) -> Optional[str]
         response_json = call_openrouter_api(api_key, model, messages)
         
         # Process response
-        if response_json and 'choices' in response_json and len(response_json['choices']) > 0:
-            content = response_json['choices'][0].get('message', {}).get('content')
-            if content:
-                logging.info(f"Received summary (model: {model}).")
-                return str(content)
-            else:
-                logging.warning(f"LLM summary response structure unexpected or content empty: {response_json}")
-                return None
+        if response_json and 'choices' in response_json and response_json['choices']:
+            if len(response_json['choices']) > 0:
+                message = response_json['choices'][0].get('message', {})
+                if message and 'content' in message:
+                    content = message.get('content')
+                    if content:
+                        logger.info(f"Received summary (model: {model}).")
+                        return str(content)
+            
+            logger.warning(f"LLM summary response structure unexpected or content empty.")
+            return None
         else:
-            logging.warning(f"LLM summary response JSON structure unexpected: {response_json}")
+            logger.warning(f"LLM summary response JSON structure unexpected: {response_json}")
             return None
             
     except (ValueError, ConnectionError, TimeoutError) as e:
         raise e
     except Exception as e:
-        logging.error(f"Unexpected error getting LLM summary: {e}")
+        logger.error(f"Unexpected error getting LLM summary: {e}")
         raise e

@@ -9,7 +9,9 @@ import logging
 from typing import Dict, Any
 from dotenv import load_dotenv
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+# Setup central logging configuration
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - [%(module)s] - %(message)s')
+logger = logging.getLogger('describepdf')
 
 # Directory containing prompt templates
 PROMPTS_DIR = "prompts"
@@ -68,13 +70,13 @@ def load_env_config() -> Dict[str, Any]:
     }
 
     _app_config = loaded_config
-    logging.info("Configuration loaded from environment variables.")
+    logger.info("Configuration loaded from environment variables.")
     
     # Log configuration without sensitive data
     log_config = _app_config.copy()
     if "openrouter_api_key" in log_config and log_config["openrouter_api_key"]:
-        log_config["openrouter_api_key"] = f"***{log_config['openrouter_api_key'][-5:]}"
-    logging.debug(f"Effective configuration: {log_config}")
+        log_config["openrouter_api_key"] = f"***{log_config['openrouter_api_key'][-5:]}" if len(log_config['openrouter_api_key']) > 5 else "*****"
+    logger.debug(f"Effective configuration: {log_config}")
     
     return _app_config
 
@@ -89,7 +91,7 @@ def load_prompt_templates() -> Dict[str, str]:
     templates = {}
     
     if not os.path.isdir(PROMPTS_DIR):
-        logging.error(f"Prompts directory '{PROMPTS_DIR}' not found.")
+        logger.error(f"Prompts directory '{PROMPTS_DIR}' not found.")
         return templates
 
     for key, filename in PROMPT_FILES.items():
@@ -98,11 +100,11 @@ def load_prompt_templates() -> Dict[str, str]:
             with open(filepath, 'r', encoding='utf-8') as f:
                 templates[key] = f.read()
         except FileNotFoundError:
-            logging.error(f"Prompt file not found: {filepath}")
+            logger.error(f"Prompt file not found: {filepath}")
         except Exception as e:
-            logging.error(f"Error reading prompt file {filepath}: {e}")
+            logger.error(f"Error reading prompt file {filepath}: {e}")
     
-    logging.info(f"Loaded {len(templates)} prompt templates.")
+    logger.info(f"Loaded {len(templates)} prompt templates.")
     _prompt_templates = templates
     return templates
 
@@ -157,7 +159,7 @@ def get_required_prompts_for_config(cfg: Dict[str, Any]) -> Dict[str, str]:
     # Check if all required prompts are available
     missing = [key for key in required_keys if key not in prompts]
     if missing:
-        logging.error(f"Missing required prompt templates: {', '.join(missing)}")
+        logger.error(f"Missing required prompt templates: {', '.join(missing)}")
         return {}
         
     return {key: prompts[key] for key in required_keys if key in prompts}

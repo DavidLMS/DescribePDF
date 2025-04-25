@@ -5,10 +5,10 @@ This module contains the main orchestration logic for converting PDFs to Markdow
 """
 
 import os
-import logging
 import time
 from typing import Dict, Any, Callable, Tuple, List, Optional
 import contextlib
+import logging
 
 from . import config
 from . import pdf_processor
@@ -16,6 +16,13 @@ from . import markitdown_processor
 from . import summarizer
 from . import openrouter_client
 from . import ollama_client
+
+# Get logger from config module
+logger = logging.getLogger('describepdf')
+
+class ConversionError(Exception):
+    """Error raised during PDF conversion process."""
+    pass
 
 def format_markdown_output(descriptions: List[str], original_filename: str) -> str:
     """
@@ -53,47 +60,47 @@ def convert_pdf_to_markdown(
     """
     start_time = time.time()
     progress_callback(0.0, "Starting conversion process...")
-    logging.info("Starting conversion process...")
+    logger.info("Starting conversion process...")
 
     # Validate provider
     provider = cfg.get("provider", "openrouter").lower()
-    logging.info(f"Using provider: {provider}")
+    logger.info(f"Using provider: {provider}")
 
     if provider == "openrouter":
         api_key = cfg.get("openrouter_api_key")
         if not api_key:
             msg = "Error: OpenRouter API Key is missing."
-            logging.error(msg)
+            logger.error(msg)
             progress_callback(0.0, msg)
             return msg, None
     elif provider == "ollama":
         ollama_endpoint = cfg.get("ollama_endpoint", "http://localhost:11434")
         if not ollama_client.OLLAMA_AVAILABLE:
             msg = "Error: Ollama Python client not installed. Install with 'pip install ollama'."
-            logging.error(msg)
+            logger.error(msg)
             progress_callback(0.0, msg)
             return msg, None
         
         if not ollama_client.check_ollama_availability(ollama_endpoint):
             msg = f"Error: Could not connect to Ollama at {ollama_endpoint}. Make sure it is running."
-            logging.error(msg)
+            logger.error(msg)
             progress_callback(0.0, msg)
             return msg, None
     else:
         msg = f"Error: Unknown provider '{provider}'. Use 'openrouter' or 'ollama'."
-        logging.error(msg)
+        logger.error(msg)
         progress_callback(0.0, msg)
         return msg, None
 
     # Validate input file
     if not pdf_path or not os.path.exists(pdf_path) or not os.path.isfile(pdf_path):
         msg = "Error: Invalid or missing PDF file."
-        logging.error(msg)
+        logger.error(msg)
         progress_callback(0.0, msg)
         return msg, None
 
     original_filename = os.path.basename(pdf_path)
-    logging.info(f"Processing file: {original_filename}")
+    logger.info(f"Processing file: {original_filename}")
 
     temp_page_files = []
     pdf_doc = None
@@ -104,7 +111,7 @@ def convert_pdf_to_markdown(
         if not required_prompts:
             msg = "Error: Could not load all required prompt templates. Check the 'prompts' directory."
             progress_callback(0.0, msg)
-            logging.error(msg)
+            logger.error(msg)
             return msg, None
 
         # Generate summary if needed
@@ -114,25 +121,24 @@ def convert_pdf_to_markdown(
             summary_model = cfg.get("summary_llm_model")
             progress_callback(summary_progress, f"Generating summary using {summary_model}...")
             try:
-                if provider == "openrouter":
-                    pdf_summary = summarizer.generate_summary_openrouter(
-                        pdf_path, cfg.get("openrouter_api_key"), summary_model
-                    )
-                elif provider == "ollama":
-                    pdf_summary = summarizer.generate_summary_ollama(
-                        pdf_path, cfg.get("ollama_endpoint"), summary_model
-                    )
+                pdf_summary = summarizer.generate_summary(
+                    pdf_path, 
+                    provider=provider, 
+                    api_key=cfg.get("openrouter_api_key"), 
+                    ollama_endpoint=cfg.get("ollama_endpoint"), 
+                    model=summary_model
+                )
                 
                 if pdf_summary:
                     progress_callback(summary_progress, "Summary generated.")
-                    logging.info("PDF summary generated.")
+                    logger.info("PDF summary generated.")
                 else:
                     progress_callback(summary_progress, "Warning: Could not generate summary (LLM might have returned empty).")
-                    logging.warning("Failed to generate PDF summary or summary was empty.")
+                    logger.warning("Failed to generate PDF summary or summary was empty.")
             except Exception as e:
                  error_msg = f"Warning: Summary generation failed: {e}"
                  progress_callback(summary_progress, error_msg)
-                 logging.warning(error_msg)
+                 logger.warning(error_msg)
                  # Continue without summary
         else:
             summary_progress = 0.0
@@ -145,7 +151,7 @@ def convert_pdf_to_markdown(
         if pdf_doc is None or not pages or total_pages == 0:
             msg = f"Error: Could not process PDF file or PDF is empty: {original_filename}"
             progress_callback(pdf_load_progress, msg)
-            logging.error(msg)
+            logger.error(msg)
             if pdf_doc:
                 pdf_doc.close()
             return msg, None
@@ -163,7 +169,7 @@ def convert_pdf_to_markdown(
             current_progress = page_processing_progress_start + (current_page_ratio * total_page_progress_ratio)
 
             progress_callback(current_progress, f"Processing page {page_num}/{total_pages}...")
-            logging.info(f"Processing page {page_num}/{total_pages}")
+            logger.info(f"Processing page {page_num}/{total_pages}")
 
             page_description = None
             temp_page_pdf_path = None
@@ -173,7 +179,7 @@ def convert_pdf_to_markdown(
                 progress_callback(current_progress, f"Page {page_num}: Rendering image...")
                 image_bytes, mime_type = pdf_processor.render_page_to_image_bytes(page, image_format="jpeg")
                 if not image_bytes:
-                    logging.warning(f"Could not render image for page {page_num}. Skipping VLM call.")
+                    logger.warning(f"Could not render image for page {page_num}. Skipping VLM call.")
                     all_descriptions.append(f"*Error: Could not render image for page {page_num}.*")
                     continue
 
@@ -181,22 +187,25 @@ def convert_pdf_to_markdown(
                 markdown_context = None
                 if cfg.get("use_markitdown"):
                     progress_callback(current_progress, f"Page {page_num}: Extracting text (Markitdown)...")
-                    with contextlib.ExitStack() as stack:
-                        temp_page_pdf_path = pdf_processor.save_page_as_temp_pdf(pdf_doc, i)
-                        if temp_page_pdf_path:
-                            # Register a cleanup callback
-                            stack.callback(lambda: os.remove(temp_page_pdf_path) if os.path.exists(temp_page_pdf_path) else None)
-                            temp_page_files.append(temp_page_pdf_path)
-                            
+                    temp_page_pdf_path = pdf_processor.save_page_as_temp_pdf(pdf_doc, i)
+                    
+                    if temp_page_pdf_path:
+                        # Track temp file for cleanup in finally block
+                        temp_page_files.append(temp_page_pdf_path)
+                        
+                        try:
                             markdown_context = markitdown_processor.get_markdown_for_page_via_temp_pdf(temp_page_pdf_path)
                             if markdown_context is None:
-                                logging.warning(f"Markitdown failed for page {page_num}. Proceeding without it.")
+                                logger.warning(f"Markitdown failed for page {page_num}. Proceeding without it.")
                                 progress_callback(current_progress, f"Page {page_num}: Markitdown extraction failed.")
                             else:
-                                logging.info(f"Markitdown context extracted for page {page_num}.")
-                        else:
-                            logging.warning(f"Could not create temporary PDF for Markitdown on page {page_num}.")
-                            progress_callback(current_progress, f"Page {page_num}: Failed to prepare for Markitdown.")
+                                logger.info(f"Markitdown context extracted for page {page_num}.")
+                        except Exception as markdown_err:
+                            logger.warning(f"Error extracting Markitdown for page {page_num}: {markdown_err}")
+                            progress_callback(current_progress, f"Page {page_num}: Markitdown extraction error.")
+                    else:
+                        logger.warning(f"Could not create temporary PDF for Markitdown on page {page_num}.")
+                        progress_callback(current_progress, f"Page {page_num}: Failed to prepare for Markitdown.")
 
                 # Select appropriate prompt
                 prompt_key = "vlm_base"
@@ -214,7 +223,7 @@ def convert_pdf_to_markdown(
                 if not vlm_prompt_template:
                     error_msg = f"Missing required prompt template: {prompt_key}"
                     progress_callback(current_progress, error_msg)
-                    logging.error(error_msg)
+                    logger.error(error_msg)
                     all_descriptions.append(f"*Error: Could not generate description for page {page_num} due to missing prompt template.*")
                     continue
 
@@ -241,71 +250,74 @@ def convert_pdf_to_markdown(
                         )
                     
                     if page_description:
-                        logging.info(f"VLM description received for page {page_num}.")
+                        logger.info(f"VLM description received for page {page_num}.")
                     else:
                         page_description = f"*Warning: VLM did not return a description for page {page_num}.*"
                         progress_callback(current_progress, f"Page {page_num}: VLM returned no description.")
-                        logging.warning(f"VLM returned no description for page {page_num}.")
+                        logger.warning(f"VLM returned no description for page {page_num}.")
 
                 except (ValueError, ConnectionError, TimeoutError, ImportError) as api_err:
                     error_msg = f"API Error on page {page_num}: {api_err}. Aborting."
                     progress_callback(current_progress, error_msg)
-                    logging.error(error_msg)
-                    raise ConnectionError(error_msg)
+                    logger.error(error_msg)
+                    raise ConversionError(error_msg)
 
                 except Exception as vlm_err:
                     error_msg = f"Unexpected error during VLM call for page {page_num}: {vlm_err}. Skipping page."
                     progress_callback(current_progress, error_msg)
-                    logging.exception(error_msg)
+                    logger.exception(error_msg)
                     page_description = f"*Error: Failed to get VLM description for page {page_num} due to an unexpected error.*"
 
                 all_descriptions.append(page_description if page_description else "*No description available.*")
 
+            except ConversionError:
+                # Let critical errors propagate up
+                raise
             except Exception as page_err:
                 error_msg = f"Unexpected error processing page {page_num}: {page_err}. Skipping page."
                 progress_callback(current_progress, error_msg)
-                logging.exception(error_msg)
+                logger.exception(error_msg)
                 all_descriptions.append(f"*Error: An unexpected error occurred while processing page {page_num}.*")
 
         # Generate final markdown
         final_progress = 0.99
         progress_callback(final_progress, "Combining page descriptions into final Markdown...")
         final_markdown = format_markdown_output(all_descriptions, original_filename)
-        logging.info("Final Markdown content assembled.")
+        logger.info("Final Markdown content assembled.")
 
         # Report completion
         end_time = time.time()
         duration = end_time - start_time
         final_status = f"Conversion completed successfully in {duration:.2f} seconds."
         progress_callback(1.0, final_status)
-        logging.info(final_status)
+        logger.info(final_status)
 
         return final_status, final_markdown
 
-    except ConnectionError as critical_api_err:
-        return str(critical_api_err), None
+    except ConversionError as critical_err:
+        return str(critical_err), None
 
     except Exception as e:
         error_msg = f"Critical Error during conversion: {e}"
         progress_callback(0.0, error_msg)
-        logging.exception(error_msg)
+        logger.exception(error_msg)
         return error_msg, None
 
     finally:
-        logging.debug("Performing final cleanup...")
+        logger.debug("Performing final cleanup...")
         # Clean up PDF document
         if pdf_doc:
             try:
                 pdf_doc.close()
-                logging.debug("Closed main PDF document.")
+                logger.debug("Closed main PDF document.")
             except Exception as e:
-                logging.warning(f"Error closing PDF document: {e}")
+                logger.warning(f"Error closing PDF document: {e}")
 
         # Clean up any leftover temporary files
         for temp_f in temp_page_files:
             if os.path.exists(temp_f):
                 try:
                     os.remove(temp_f)
-                    logging.debug(f"Cleaned up leftover temporary page PDF: {temp_f}")
+                    logger.debug(f"Cleaned up temporary page PDF: {temp_f}")
                 except OSError as e:
-                    logging.warning(f"Could not remove leftover temporary page PDF {temp_f}: {e}")
+                    logger.warning(f"Could not remove temporary page PDF {temp_f}: {e}")

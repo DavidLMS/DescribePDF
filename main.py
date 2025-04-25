@@ -10,6 +10,8 @@ import argparse
 import sys
 from typing import List, Optional
 
+from describepdf.config import logger
+
 def parse_arguments(args: Optional[List[str]] = None) -> argparse.Namespace:
     """
     Parse command line arguments.
@@ -38,9 +40,8 @@ def main(args: Optional[List[str]] = None) -> int:
     Returns:
         int: Exit code (0 for success, non-zero for error)
     """
-    # Configure logging
-    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - [%(module)s] - %(message)s')
-    logging.info("Starting DescribePDF...")
+    # Logging is already configured in config.py, we just need to use the logger
+    logger.info("Starting DescribePDF...")
     
     # Parse arguments
     parsed_args = parse_arguments(args)
@@ -50,7 +51,7 @@ def main(args: Optional[List[str]] = None) -> int:
         if parsed_args.web:
             # Start web UI with OpenRouter
             from describepdf import ui
-            logging.info("Starting in WEB mode with Gradio interface for OpenRouter...")
+            logger.info("Starting in WEB mode with Gradio interface for OpenRouter...")
             app_ui = ui.create_ui()
             app_ui.launch()
             return 0
@@ -58,7 +59,7 @@ def main(args: Optional[List[str]] = None) -> int:
         elif parsed_args.web_ollama:
             # Start web UI with Ollama
             from describepdf import ui_ollama
-            logging.info("Starting in WEB mode with Gradio interface for Ollama...")
+            logger.info("Starting in WEB mode with Gradio interface for Ollama...")
             app_ui = ui_ollama.create_ui()
             app_ui.launch()
             return 0
@@ -66,25 +67,24 @@ def main(args: Optional[List[str]] = None) -> int:
         else:
             # Start CLI mode
             from describepdf import cli
-            logging.info("Starting in CLI mode...")
+            logger.info("Starting in CLI mode...")
             cli.run_cli()
             return 0
             
     except ImportError as e:
-        logging.error(f"Failed to start, likely a missing dependency: {e}")
-        print(f"\nError: Failed to start. Please ensure all dependencies from requirements.txt are installed.\nDetails: {e}\n")
+        logger.error(f"Failed to start, likely a missing dependency: {e}")
+        logger.error(f"Details: {e}")
         return 1
         
     except KeyboardInterrupt:
-        logging.info("Application stopped by user.")
+        logger.info("Application stopped by user.")
         return 0
         
     except Exception as e:
-        logging.error(f"An unexpected error occurred: {e}", exc_info=True)
-        print(f"\nAn unexpected error occurred: {e}\n")
+        logger.error(f"An unexpected error occurred: {e}", exc_info=True)
         return 1
 
 if __name__ == "__main__":
     exit_code = main()
-    logging.info(f"DescribePDF application stopped with code {exit_code}.")
+    logger.info(f"DescribePDF application stopped with code {exit_code}.")
     sys.exit(exit_code)

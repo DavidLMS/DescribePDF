@@ -6,14 +6,17 @@ This module provides the CLI functionality for converting PDF files to markdown 
 
 import argparse
 import os
-import logging
 import sys
+import logging
 from typing import Dict, Any, Callable
 from tqdm import tqdm
 
 from . import config
 from . import core
 from . import ollama_client
+
+# Get logger from config module
+logger = logging.getLogger('describepdf')
 
 def setup_cli_parser() -> argparse.ArgumentParser:
     """
@@ -96,7 +99,7 @@ def create_progress_callback() -> Callable[[float, str], None]:
         Callable[[float, str], None]: Progress callback function
     """
     progress_bar = tqdm(total=100, desc="Processing", unit="%")
-    last_progress = 0
+    last_progress = 0  # Initialize here to avoid nonlocal reference without assignment
     
     def callback(progress_value: float, status: str) -> None:
         """
@@ -134,12 +137,13 @@ def run_cli() -> None:
     args = parser.parse_args()
     
     # Configure logging based on verbosity
-    log_level = logging.DEBUG if args.verbose else logging.INFO
-    logging.basicConfig(level=log_level, format='%(asctime)s - %(levelname)s - [%(module)s] - %(message)s')
+    if args.verbose:
+        logger.setLevel(logging.DEBUG)
     
     # Validate input file exists
     if not os.path.exists(args.pdf_file) or not os.path.isfile(args.pdf_file):
-        print(f"Error: The PDF file '{args.pdf_file}' does not exist or is not a valid file.")
+        logger.error(f"The PDF file '{args.pdf_file}' does not exist or is not a valid file.")
+        logger.info("Exiting with error code 1")
         sys.exit(1)
     
     # Load configuration from environment
@@ -170,7 +174,8 @@ def run_cli() -> None:
             summary_model = env_config.get("or_summary_model")
             
         if not run_config.get("openrouter_api_key"):
-            print("Error: An OpenRouter API key is required. Provide one with --api-key or configure it in the .env file")
+            logger.error("An OpenRouter API key is required. Provide one with --api-key or configure it in the .env file")
+            logger.info("Exiting with error code 1")
             sys.exit(1)
     
     elif provider == "ollama":
@@ -183,11 +188,13 @@ def run_cli() -> None:
             summary_model = env_config.get("ollama_summary_model")
         
         if not ollama_client.OLLAMA_AVAILABLE:
-            print("Error: Ollama Python client not installed. Install with 'pip install ollama'")
+            logger.error("Ollama Python client not installed. Install with 'pip install ollama'")
+            logger.info("Exiting with error code 1")
             sys.exit(1)
             
         if not ollama_client.check_ollama_availability(run_config["ollama_endpoint"]):
-            print(f"Error: Could not connect to Ollama at {run_config['ollama_endpoint']}. Make sure it is running.")
+            logger.error(f"Could not connect to Ollama at {run_config['ollama_endpoint']}. Make sure it is running.")
+            logger.info("Exiting with error code 1")
             sys.exit(1)
     
     run_config["vlm_model"] = vlm_model
@@ -195,25 +202,24 @@ def run_cli() -> None:
         run_config["summary_llm_model"] = summary_model
     
     # Print configuration summary
-    print(f"Processing PDF: {os.path.basename(args.pdf_file)}")
-    print(f"Provider: {run_config['provider']}")
+    logger.info(f"Processing PDF: {os.path.basename(args.pdf_file)}")
+    logger.info(f"Provider: {run_config['provider']}")
     
     if run_config['provider'] == 'openrouter':
         if run_config['openrouter_api_key']:
             masked_key = '*' * 8 + run_config['openrouter_api_key'][-5:] if len(run_config['openrouter_api_key']) > 5 else '*****'
-            print(f"OpenRouter API Key: {masked_key}")
+            logger.info(f"OpenRouter API Key: {masked_key}")
         else:
-            print("OpenRouter API Key: Not provided")
+            logger.info("OpenRouter API Key: Not provided")
     else:
-        print(f"Ollama Endpoint: {run_config['ollama_endpoint']}")
+        logger.info(f"Ollama Endpoint: {run_config['ollama_endpoint']}")
     
-    print(f"VLM Model: {run_config['vlm_model']}")
-    print(f"Language: {run_config['output_language']}")
-    print(f"Markitdown: {'Yes' if run_config['use_markitdown'] else 'No'}")
-    print(f"Summary: {'Yes' if run_config['use_summary'] else 'No'}")
+    logger.info(f"VLM Model: {run_config['vlm_model']}")
+    logger.info(f"Language: {run_config['output_language']}")
+    logger.info(f"Markitdown: {'Yes' if run_config['use_markitdown'] else 'No'}")
+    logger.info(f"Summary: {'Yes' if run_config['use_summary'] else 'No'}")
     if run_config['use_summary']:
-        print(f"Summary model: {run_config['summary_llm_model']}")
-    print("")
+        logger.info(f"Summary model: {run_config['summary_llm_model']}")
     
     # Create progress callback
     progress_callback = create_progress_callback()
@@ -226,7 +232,8 @@ def run_cli() -> None:
     )
     
     if not markdown_result:
-        print(f"\nError: {status}")
+        logger.error(f"Error: {status}")
+        logger.info("Exiting with error code 1")
         sys.exit(1)
     
     # Determine output filename
@@ -239,10 +246,8 @@ def run_cli() -> None:
     try:
         with open(output_filename, "w", encoding="utf-8") as md_file:
             md_file.write(markdown_result)
-        print(f"\nConversion completed. Result saved to: {output_filename}")
+        logger.info(f"Conversion completed. Result saved to: {output_filename}")
     except Exception as e:
-        print(f"\nError saving output file: {e}")
+        logger.error(f"Error saving output file: {e}")
+        logger.info("Exiting with error code 1")
         sys.exit(1)
-
-if __name__ == "__main__":
-    run_cli()
