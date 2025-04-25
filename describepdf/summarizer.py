@@ -112,7 +112,6 @@ def generate_summary_ollama(pdf_path: str, endpoint: str, model: str):
         logging.error(f"Unexpected error during summary generation with Ollama: {e}")
         return None
 
-# Función de compatibilidad para código existente
 def generate_summary(pdf_path: str, api_key: str, model: str):
     """
     Función de compatibilidad que utiliza OpenRouter.

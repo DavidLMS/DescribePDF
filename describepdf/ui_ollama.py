@@ -11,7 +11,6 @@ def generate(pdf_file_obj, ollama_endpoint, ui_vlm_model, ui_lang, ui_use_md, ui
     if pdf_file_obj is None:
         return "Please upload a PDF file.", gr.update(value=None, visible=False), None
 
-    # Verificamos la disponibilidad de Ollama
     if not ollama_client.check_ollama_availability(ollama_endpoint):
         error_msg = f"Error: Could not connect to Ollama at {ollama_endpoint}. Make sure it is running."
         logging.error(error_msg)
