@@ -15,6 +15,7 @@ from .config import logger
 try:
     from markitdown import MarkItDown
     MARKITDOWN_AVAILABLE = True
+    logger.info("MarkItDown library is available and successfully imported.")
 except ImportError:
     logger.warning("MarkItDown library not installed. Install with 'pip install markitdown[pdf]'")
     MARKITDOWN_AVAILABLE = False
@@ -30,6 +31,7 @@ def _get_markdown_converter():
         MarkItDown: An initialized MarkItDown converter or None if not available
     """
     if not MARKITDOWN_AVAILABLE:
+        logger.error("Cannot initialize MarkItDown converter - library not available.")
         return None
         
     try:

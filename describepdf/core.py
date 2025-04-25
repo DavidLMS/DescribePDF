@@ -7,7 +7,6 @@ This module contains the main orchestration logic for converting PDFs to Markdow
 import os
 import time
 from typing import Dict, Any, Callable, Tuple, List, Optional
-import logging
 import contextlib
 
 from . import config
@@ -18,7 +17,7 @@ from . import openrouter_client
 from . import ollama_client
 
 # Get logger from config module
-logger = logging.getLogger('describepdf')
+logger = config.logger
 
 class ConversionError(Exception):
     """Error raised during PDF conversion process."""
@@ -102,7 +101,6 @@ def convert_pdf_to_markdown(
     original_filename = os.path.basename(pdf_path)
     logger.info(f"Processing file: {original_filename}")
 
-    temp_page_files = []
     pdf_doc = None
 
     try:
@@ -154,12 +152,17 @@ def convert_pdf_to_markdown(
         with contextlib.ExitStack() as stack:
             pdf_doc, pages, total_pages = pdf_processor.get_pdf_pages(pdf_path)
             
-            # Register PDF document for cleanup if it was successfully opened
-            if pdf_doc:
+            # Register PDF document for cleanup only if it was successfully opened
+            if pdf_doc is not None:
                 stack.callback(pdf_doc.close)
+            else:
+                msg = f"Error: Could not process PDF file: {original_filename}"
+                progress_callback(pdf_load_progress, msg)
+                logger.error(msg)
+                return msg, None
 
-            if pdf_doc is None or not pages or total_pages == 0:
-                msg = f"Error: Could not process PDF file or PDF is empty: {original_filename}"
+            if not pages or total_pages == 0:
+                msg = f"Error: PDF file is empty: {original_filename}"
                 progress_callback(pdf_load_progress, msg)
                 logger.error(msg)
                 return msg, None
@@ -195,28 +198,31 @@ def convert_pdf_to_markdown(
                     markdown_context = None
                     if cfg.get("use_markitdown"):
                         progress_callback(current_progress, f"Page {page_num}: Extracting text (Markitdown)...")
-                        temp_page_pdf_path = pdf_processor.save_page_as_temp_pdf(pdf_doc, i)
                         
-                        if temp_page_pdf_path:
-                            # Register temp file for cleanup
-                            stack.callback(lambda p=temp_page_pdf_path: os.remove(p) if os.path.exists(p) else None)
-                            
-                            # Track temp file for reporting
-                            temp_page_files.append(temp_page_pdf_path)
-                            
-                            try:
-                                markdown_context = markitdown_processor.get_markdown_for_page_via_temp_pdf(temp_page_pdf_path)
-                                if markdown_context is None:
-                                    logger.warning(f"Markitdown failed for page {page_num}. Proceeding without it.")
-                                    progress_callback(current_progress, f"Page {page_num}: Markitdown extraction failed.")
-                                else:
-                                    logger.info(f"Markitdown context extracted for page {page_num}.")
-                            except Exception as markdown_err:
-                                logger.warning(f"Error extracting Markitdown for page {page_num}: {markdown_err}")
-                                progress_callback(current_progress, f"Page {page_num}: Markitdown extraction error.")
+                        # Verify Markitdown availability
+                        if not markitdown_processor.MARKITDOWN_AVAILABLE:
+                            logger.warning(f"Markitdown not available for page {page_num}. Proceeding without it.")
+                            progress_callback(current_progress, f"Page {page_num}: Markitdown not available, skipping extraction.")
                         else:
-                            logger.warning(f"Could not create temporary PDF for Markitdown on page {page_num}.")
-                            progress_callback(current_progress, f"Page {page_num}: Failed to prepare for Markitdown.")
+                            temp_page_pdf_path = pdf_processor.save_page_as_temp_pdf(pdf_doc, i)
+                            
+                            if temp_page_pdf_path:
+                                # Register temp file for cleanup
+                                stack.callback(lambda p=temp_page_pdf_path: os.remove(p) if os.path.exists(p) else None)
+                                
+                                try:
+                                    markdown_context = markitdown_processor.get_markdown_for_page_via_temp_pdf(temp_page_pdf_path)
+                                    if markdown_context is None:
+                                        logger.warning(f"Markitdown failed for page {page_num}. Proceeding without it.")
+                                        progress_callback(current_progress, f"Page {page_num}: Markitdown extraction failed.")
+                                    else:
+                                        logger.info(f"Markitdown context extracted for page {page_num}.")
+                                except Exception as markdown_err:
+                                    logger.warning(f"Error extracting Markitdown for page {page_num}: {markdown_err}")
+                                    progress_callback(current_progress, f"Page {page_num}: Markitdown extraction error.")
+                            else:
+                                logger.warning(f"Could not create temporary PDF for Markitdown on page {page_num}.")
+                                progress_callback(current_progress, f"Page {page_num}: Failed to prepare for Markitdown.")
 
                     # Select appropriate prompt
                     prompt_key = "vlm_base"

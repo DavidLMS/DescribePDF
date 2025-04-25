@@ -8,11 +8,10 @@ including rendering, text extraction, and file manipulation.
 import io
 import os
 import tempfile
-import logging
 from typing import Tuple, List, Optional
 
 # Get logger from config module
-logger = logging.getLogger('describepdf')
+from .config import logger
 
 # Import PyMuPDF
 try:
@@ -33,13 +32,16 @@ except ImportError:
 def get_pdf_pages(pdf_path: str) -> Tuple[Optional[pymupdf.Document], Optional[List[pymupdf.Page]], int]:
     """
     Open a PDF and return a list of page objects and the total number of pages.
+    
+    NOTE: The caller is responsible for calling close() on the returned document
+    when done with it.
 
     Args:
         pdf_path: Path to the PDF file
 
     Returns:
         Tuple containing:
-        - pymupdf.Document: The open PDF document
+        - pymupdf.Document: The open PDF document (caller must close)
         - List[pymupdf.Page]: List of page objects
         - int: Total number of pages (0 if error)
     """
@@ -130,7 +132,8 @@ def extract_all_text(pdf_path: str) -> Optional[str]:
         logger.error(f"Error extracting text from PDF {pdf_path}: {e}")
         return None
     finally:
-        if doc:
+        # Always close the document if we opened it
+        if doc is not None:
             doc.close()
 
 def save_page_as_temp_pdf(original_doc: pymupdf.Document, page_num: int) -> Optional[str]:
@@ -176,6 +179,6 @@ def save_page_as_temp_pdf(original_doc: pymupdf.Document, page_num: int) -> Opti
         return None
         
     finally:
-        # Close the new document
-        if new_doc:
+        # Always close the new document if we created it
+        if new_doc is not None:
             new_doc.close()
