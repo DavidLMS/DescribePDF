@@ -16,8 +16,8 @@ logger = logging.getLogger('describepdf')
 # Directory containing prompt templates
 PROMPTS_DIR = "prompts"
 
-# Default configuration values if not found in environment
-FALLBACK_DEFAULTS = {
+# Default configuration values
+DEFAULT_CONFIG = {
     "openrouter_api_key": None,
     "or_vlm_model": "qwen/qwen2.5-vl-72b-instruct",
     "or_summary_model": "google/gemini-2.5-flash-preview",
@@ -46,7 +46,10 @@ _prompt_templates: Dict[str, str] = {}
 
 def load_env_config() -> Dict[str, Any]:
     """
-    Load configuration exclusively from environment variables (.env file).
+    Load configuration from environment variables (.env file).
+    
+    This function reads configuration values from environment variables,
+    falling back to default values when environment variables are not set.
     
     Returns:
         Dict[str, Any]: Dictionary with the loaded configuration
@@ -56,17 +59,17 @@ def load_env_config() -> Dict[str, Any]:
     load_dotenv()
 
     loaded_config = {
-        "openrouter_api_key": os.getenv("OPENROUTER_API_KEY") or FALLBACK_DEFAULTS["openrouter_api_key"],
-        "or_vlm_model": os.getenv("DEFAULT_OR_VLM_MODEL") or FALLBACK_DEFAULTS["or_vlm_model"],
-        "or_summary_model": os.getenv("DEFAULT_OR_SUMMARY_MODEL") or FALLBACK_DEFAULTS["or_summary_model"],
+        "openrouter_api_key": os.getenv("OPENROUTER_API_KEY", DEFAULT_CONFIG["openrouter_api_key"]),
+        "or_vlm_model": os.getenv("DEFAULT_OR_VLM_MODEL", DEFAULT_CONFIG["or_vlm_model"]),
+        "or_summary_model": os.getenv("DEFAULT_OR_SUMMARY_MODEL", DEFAULT_CONFIG["or_summary_model"]),
         
-        "ollama_endpoint": os.getenv("OLLAMA_ENDPOINT") or FALLBACK_DEFAULTS["ollama_endpoint"],
-        "ollama_vlm_model": os.getenv("DEFAULT_OLLAMA_VLM_MODEL") or FALLBACK_DEFAULTS["ollama_vlm_model"],
-        "ollama_summary_model": os.getenv("DEFAULT_OLLAMA_SUMMARY_MODEL") or FALLBACK_DEFAULTS["ollama_summary_model"],
+        "ollama_endpoint": os.getenv("OLLAMA_ENDPOINT", DEFAULT_CONFIG["ollama_endpoint"]),
+        "ollama_vlm_model": os.getenv("DEFAULT_OLLAMA_VLM_MODEL", DEFAULT_CONFIG["ollama_vlm_model"]),
+        "ollama_summary_model": os.getenv("DEFAULT_OLLAMA_SUMMARY_MODEL", DEFAULT_CONFIG["ollama_summary_model"]),
         
-        "output_language": os.getenv("DEFAULT_LANGUAGE") or FALLBACK_DEFAULTS["output_language"],
-        "use_markitdown": str(os.getenv("DEFAULT_USE_MARKITDOWN", str(FALLBACK_DEFAULTS["use_markitdown"]))).lower() == 'true',
-        "use_summary": str(os.getenv("DEFAULT_USE_SUMMARY", str(FALLBACK_DEFAULTS["use_summary"]))).lower() == 'true'
+        "output_language": os.getenv("DEFAULT_LANGUAGE", DEFAULT_CONFIG["output_language"]),
+        "use_markitdown": str(os.getenv("DEFAULT_USE_MARKITDOWN", str(DEFAULT_CONFIG["use_markitdown"]))).lower() == 'true',
+        "use_summary": str(os.getenv("DEFAULT_USE_SUMMARY", str(DEFAULT_CONFIG["use_summary"]))).lower() == 'true'
     }
 
     _app_config = loaded_config
@@ -83,6 +86,9 @@ def load_env_config() -> Dict[str, Any]:
 def load_prompt_templates() -> Dict[str, str]:
     """
     Load prompt templates from the prompts directory.
+    
+    This function reads template files from the prompts directory specified by
+    PROMPTS_DIR and maps them to their corresponding keys in the PROMPT_FILES dictionary.
     
     Returns:
         Dict[str, str]: Dictionary with loaded prompt templates
@@ -112,6 +118,8 @@ def get_config() -> Dict[str, Any]:
     """
     Get the currently loaded configuration from .env.
     
+    This function returns the current configuration, loading it first if needed.
+    
     Returns:
         Dict[str, Any]: Current configuration dictionary
     """
@@ -123,6 +131,8 @@ def get_prompts() -> Dict[str, str]:
     """
     Get the currently loaded prompt templates.
     
+    This function returns the loaded prompt templates, loading them first if needed.
+    
     Returns:
         Dict[str, str]: Dictionary with loaded prompt templates
     """
@@ -133,6 +143,9 @@ def get_prompts() -> Dict[str, str]:
 def get_required_prompts_for_config(cfg: Dict[str, Any]) -> Dict[str, str]:
     """
     Get only the prompt templates required for the given configuration.
+    
+    This function determines which prompt templates are necessary based on the
+    provided configuration and returns only those templates.
     
     Args:
         cfg (Dict[str, Any]): Configuration dictionary

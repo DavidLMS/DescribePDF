@@ -68,7 +68,13 @@ def generate(
 
     # Create progress callback for Gradio
     def progress_callback_gradio(progress_value: float, status: str) -> None:
-        """Update Gradio progress bar."""
+        """
+        Update Gradio progress bar with current progress and status message.
+        
+        Args:
+            progress_value (float): Progress value between 0.0 and 1.0
+            status (str): Current status message to display
+        """
         clamped_progress = max(0.0, min(1.0, progress_value))
         progress(clamped_progress, desc=status)
         logging.info(f"Progress: {status} ({clamped_progress*100:.1f}%)")
@@ -81,7 +87,6 @@ def generate(
     )
 
     # Handle the download file
-    download_file = None
     if result_markdown:
         try:
             # Get base filename from the uploaded PDF
@@ -97,8 +102,7 @@ def generate(
             with open(download_filepath, "w", encoding="utf-8") as md_file:
                 md_file.write(result_markdown)
                 
-            download_file = download_filepath
-            logging.info(f"Markdown result saved to temporary file for download: {download_file}")
+            logging.info(f"Markdown result saved to temporary file for download: {download_filepath}")
             download_button_update = gr.update(value=download_filepath, visible=True, label=f"Download '{download_filename}'")
 
         except Exception as e:
@@ -118,8 +122,12 @@ def create_ui() -> gr.Blocks:
     """
     Create and return the Gradio interface for Ollama.
     
+    This function sets up a Gradio web interface with tabs for PDF conversion
+    and configuration. It loads initial settings from the environment config
+    and provides UI components for adjusting settings for each conversion run.
+    
     Returns:
-        gr.Blocks: Configured Gradio interface
+        gr.Blocks: Configured Gradio interface ready to be launched
     """
     # Load initial config from environment
     initial_env_config = config.get_config()
@@ -241,6 +249,8 @@ def create_ui() -> gr.Blocks:
 def launch_app() -> None:
     """
     Start the application from the command line.
+    
+    This function creates the Gradio UI and launches it.
     """
     app = create_ui()
     app.launch()

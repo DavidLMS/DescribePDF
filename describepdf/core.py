@@ -7,7 +7,6 @@ This module contains the main orchestration logic for converting PDFs to Markdow
 import os
 import time
 from typing import Dict, Any, Callable, Tuple, List, Optional
-import contextlib
 import logging
 
 from . import config
@@ -135,11 +134,14 @@ def convert_pdf_to_markdown(
                 else:
                     progress_callback(summary_progress, "Warning: Could not generate summary (LLM might have returned empty).")
                     logger.warning("Failed to generate PDF summary or summary was empty.")
+                    # Set use_summary to False since we don't have a summary
+                    cfg["use_summary"] = False
             except Exception as e:
                  error_msg = f"Warning: Summary generation failed: {e}"
                  progress_callback(summary_progress, error_msg)
                  logger.warning(error_msg)
-                 # Continue without summary
+                 # Set use_summary to False since summary generation failed
+                 cfg["use_summary"] = False
         else:
             summary_progress = 0.0
 

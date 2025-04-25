@@ -99,7 +99,6 @@ def create_progress_callback() -> Callable[[float, str], None]:
         Callable[[float, str], None]: Progress callback function
     """
     progress_bar = tqdm(total=100, desc="Processing", unit="%")
-    last_progress = 0  # Initialize here to avoid nonlocal reference without assignment
     
     def callback(progress_value: float, status: str) -> None:
         """
@@ -109,14 +108,14 @@ def create_progress_callback() -> Callable[[float, str], None]:
             progress_value (float): Progress value between 0.0 and 1.0
             status (str): Current status message
         """
-        nonlocal last_progress
+        nonlocal progress_bar
         
         current_progress = int(progress_value * 100)
+        last_progress = progress_bar.n
         progress_diff = current_progress - last_progress
         
         if progress_diff > 0:
             progress_bar.update(progress_diff)
-            last_progress = current_progress
         
         progress_bar.set_description(status)
         
