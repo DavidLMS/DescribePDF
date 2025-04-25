@@ -1,3 +1,5 @@
+![poster](assets/poster.png)
+
 # DescribePDF
 
 Una herramienta que convierte archivos PDF en descripciones detalladas en formato Markdown utilizando modelos de visión-lenguaje (VLM).
