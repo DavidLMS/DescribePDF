@@ -1,3 +1,4 @@
 .env
 .DS_Store
 /describepdf/__pycache__
+/describepdf.egg-info

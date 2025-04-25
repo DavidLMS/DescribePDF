@@ -79,18 +79,13 @@ def create_ui():
     initial_use_md = initial_env_config.get("use_markitdown", False)
     initial_use_sum = initial_env_config.get("use_summary", False)
 
-    with gr.Blocks(theme=gr.themes.Soft(), title="DescribePDF - Ollama") as iface:
+    with gr.Blocks(title="DescribePDF - Ollama") as iface:
         gr.Markdown("# DescribePDF with Ollama - PDF to Markdown using local models")
         gr.Markdown(
             "This application converts PDF files into Markdown format using a local Vision Language Model (VLM) "
             "through Ollama to describe each page's content.\n"
             "Upload a PDF, adjust settings (optional), and click 'Convert to MD'. "
             "Default settings are loaded from the `.env` file on startup. Settings chosen here apply only to the current conversion."
-        )
-        
-        gr.Markdown(
-            "> **Note**: This tool is also available as a command-line utility. "
-            "Run `describepdf --help` to see available options."
         )
 
         with gr.Tabs():

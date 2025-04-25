@@ -91,18 +91,13 @@ def create_ui():
     
     has_env_api_key = bool(initial_env_config.get("openrouter_api_key"))
 
-    with gr.Blocks(theme=gr.themes.Soft(), title="DescribePDF") as iface:
+    with gr.Blocks(title="DescribePDF") as iface:
         gr.Markdown("# DescribePDF - Visual PDF to Markdown extensive description")
         gr.Markdown(
             "This application converts PDF files into Markdown format using a Vision Language Model (VLM) "
             "to describe each page's content.\n"
             "Upload a PDF, adjust settings (optional), and click 'Convert to MD'. "
             "Default settings are loaded from the `.env` file on startup. Settings chosen here apply only to the current conversion."
-        )
-        
-        gr.Markdown(
-            "> **Note**: This tool is also available as a command-line utility. "
-            "Run `describepdf --help` to see available options."
         )
 
         with gr.Tabs():
