@@ -8,6 +8,7 @@ import os
 import time
 from typing import Dict, Any, Callable, Tuple, List, Optional
 import contextlib
+import logging
 
 from . import config
 from . import pdf_processor
@@ -17,7 +18,7 @@ from . import openrouter_client
 from . import ollama_client
 
 # Get logger from config module
-logger = config.logger
+logger = logging.getLogger('describepdf')
 
 class ConversionError(Exception):
     """Error raised during PDF conversion process."""
@@ -177,8 +178,11 @@ def convert_pdf_to_markdown(
             for i, page in enumerate(pages):
                 page_num = i + 1
                 current_page_ratio = (page_num / total_pages) if total_pages > 0 else 1.0
+                
+                # Calculate progress for this specific page
                 current_progress = page_processing_progress_start + (current_page_ratio * total_page_progress_ratio)
 
+                # Update progress for the start of page processing 
                 progress_callback(current_progress, f"Processing page {page_num}/{total_pages}...")
                 logger.info(f"Processing page {page_num}/{total_pages}")
 
@@ -187,7 +191,8 @@ def convert_pdf_to_markdown(
 
                 try:
                     # Render page to image
-                    progress_callback(current_progress, f"Page {page_num}: Rendering image...")
+                    render_progress_message = f"Page {page_num}: Rendering image..."
+                    progress_callback(current_progress, render_progress_message)
                     image_bytes, mime_type = pdf_processor.render_page_to_image_bytes(page, image_format="jpeg")
                     if not image_bytes:
                         logger.warning(f"Could not render image for page {page_num}. Skipping VLM call.")
@@ -197,7 +202,8 @@ def convert_pdf_to_markdown(
                     # Extract markdown context if needed
                     markdown_context = None
                     if cfg.get("use_markitdown"):
-                        progress_callback(current_progress, f"Page {page_num}: Extracting text (Markitdown)...")
+                        markitdown_progress_message = f"Page {page_num}: Extracting text (Markitdown)..."
+                        progress_callback(current_progress, markitdown_progress_message)
                         
                         # Verify Markitdown availability
                         if not markitdown_processor.MARKITDOWN_AVAILABLE:
@@ -255,7 +261,8 @@ def convert_pdf_to_markdown(
 
                     # Call VLM
                     vlm_model = cfg.get("vlm_model")
-                    progress_callback(current_progress, f"Page {page_num}: Calling VLM ({vlm_model})...")
+                    vlm_progress_message = f"Page {page_num}: Calling VLM ({vlm_model})..."
+                    progress_callback(current_progress, vlm_progress_message)
                     try:
                         if provider == "openrouter":
                             page_description = openrouter_client.get_vlm_description(

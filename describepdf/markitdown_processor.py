@@ -6,10 +6,10 @@ MarkItDown library to convert PDF content to markdown format.
 """
 
 import os
+import logging
 from typing import Optional
 
-# Get logger from config module
-from .config import logger
+logger = logging.getLogger('describepdf')
 
 # Check if MarkItDown is available
 try:

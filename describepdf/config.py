@@ -16,7 +16,7 @@ logger = logging.getLogger('describepdf')
 
 # Directory containing prompt templates (making path absolute by using current file location)
 SCRIPT_DIR = pathlib.Path(__file__).parent.parent.absolute()
-PROMPTS_DIR = os.path.join(SCRIPT_DIR, "prompts")
+PROMPTS_DIR = pathlib.Path(SCRIPT_DIR) / "prompts"
 
 # Default configuration values
 DEFAULT_CONFIG = {
@@ -42,10 +42,6 @@ PROMPT_FILES = {
     "vlm_full": "vlm_prompt_full.md"
 }
 
-# Global configuration storage
-_app_config: Dict[str, Any] = {}
-_prompt_templates: Dict[str, str] = {}
-
 def load_env_config() -> Dict[str, Any]:
     """
     Load configuration from environment variables (.env file).
@@ -56,8 +52,6 @@ def load_env_config() -> Dict[str, Any]:
     Returns:
         Dict[str, Any]: Dictionary with the loaded configuration
     """
-    global _app_config
-
     load_dotenv()
 
     # Start with the default config
@@ -91,16 +85,15 @@ def load_env_config() -> Dict[str, Any]:
     if os.getenv("DEFAULT_USE_SUMMARY"):
         loaded_config["use_summary"] = str(os.getenv("DEFAULT_USE_SUMMARY")).lower() == 'true'
 
-    _app_config = loaded_config
     logger.info("Configuration loaded from environment variables.")
     
     # Log configuration without sensitive data
-    log_config = _app_config.copy()
+    log_config = loaded_config.copy()
     if "openrouter_api_key" in log_config and log_config["openrouter_api_key"]:
         log_config["openrouter_api_key"] = f"***{log_config['openrouter_api_key'][-5:]}" if len(log_config['openrouter_api_key']) > 5 else "*****"
     logger.debug(f"Effective configuration: {log_config}")
     
-    return _app_config
+    return loaded_config
 
 def load_prompt_templates() -> Dict[str, str]:
     """
@@ -112,15 +105,14 @@ def load_prompt_templates() -> Dict[str, str]:
     Returns:
         Dict[str, str]: Dictionary with loaded prompt templates
     """
-    global _prompt_templates
     templates = {}
     
-    if not os.path.isdir(PROMPTS_DIR):
+    if not PROMPTS_DIR.is_dir():
         logger.error(f"Prompts directory '{PROMPTS_DIR}' not found.")
         return templates
 
     for key, filename in PROMPT_FILES.items():
-        filepath = os.path.join(PROMPTS_DIR, filename)
+        filepath = PROMPTS_DIR / filename
         try:
             with open(filepath, 'r', encoding='utf-8') as f:
                 templates[key] = f.read()
@@ -130,34 +122,29 @@ def load_prompt_templates() -> Dict[str, str]:
             logger.error(f"Error reading prompt file {filepath}: {e}")
     
     logger.info(f"Loaded {len(templates)} prompt templates.")
-    _prompt_templates = templates
     return templates
 
 def get_config() -> Dict[str, Any]:
     """
-    Get the currently loaded configuration from .env.
+    Get the configuration from .env.
     
-    This function returns the current configuration, loading it first if needed.
+    This function loads the configuration if it hasn't been loaded yet.
     
     Returns:
         Dict[str, Any]: Current configuration dictionary
     """
-    if not _app_config:
-        load_env_config()
-    return _app_config
+    return load_env_config()
 
 def get_prompts() -> Dict[str, str]:
     """
-    Get the currently loaded prompt templates.
+    Get the prompt templates.
     
-    This function returns the loaded prompt templates, loading them first if needed.
+    This function loads the prompt templates if they haven't been loaded yet.
     
     Returns:
         Dict[str, str]: Dictionary with loaded prompt templates
     """
-    if not _prompt_templates:
-        load_prompt_templates()
-    return _prompt_templates
+    return load_prompt_templates()
 
 def get_required_prompts_for_config(cfg: Dict[str, Any]) -> Dict[str, str]:
     """
@@ -195,7 +182,3 @@ def get_required_prompts_for_config(cfg: Dict[str, Any]) -> Dict[str, str]:
         return {}
         
     return {key: prompts[key] for key in required_keys if key in prompts}
-
-# Load configuration and prompt templates at module import
-load_env_config()
-load_prompt_templates()
