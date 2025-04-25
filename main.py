@@ -5,7 +5,6 @@ This module handles command-line argument parsing and routes to the appropriate
 UI or CLI functionality based on the provided arguments.
 """
 
-import logging
 import argparse
 import sys
 from typing import List, Optional

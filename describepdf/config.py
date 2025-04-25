@@ -6,7 +6,7 @@ and prompt templates from files.
 """
 import os
 import logging
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from dotenv import load_dotenv
 import pathlib
 
@@ -19,7 +19,7 @@ SCRIPT_DIR = pathlib.Path(__file__).parent.parent.absolute()
 PROMPTS_DIR = pathlib.Path(SCRIPT_DIR) / "prompts"
 
 # Default configuration values
-DEFAULT_CONFIG = {
+DEFAULT_CONFIG: Dict[str, Any] = {
     "openrouter_api_key": None,
     "or_vlm_model": "qwen/qwen2.5-vl-72b-instruct",
     "or_summary_model": "google/gemini-2.5-flash-preview",
@@ -34,7 +34,7 @@ DEFAULT_CONFIG = {
 }
 
 # Mapping of prompt template identifiers to their file names
-PROMPT_FILES = {
+PROMPT_FILES: Dict[str, str] = {
     "summary": "summary_prompt.md",
     "vlm_base": "vlm_prompt_base.md",
     "vlm_markdown": "vlm_prompt_with_markdown.md",
@@ -43,10 +43,10 @@ PROMPT_FILES = {
 }
 
 # Cache for loaded configuration
-_CONFIG_CACHE = None
+_CONFIG_CACHE: Optional[Dict[str, Any]] = None
 
 # Cache for loaded prompts
-_PROMPTS_CACHE = None
+_PROMPTS_CACHE: Optional[Dict[str, str]] = None
 
 def load_env_config() -> Dict[str, Any]:
     """
@@ -111,7 +111,7 @@ def load_prompt_templates() -> Dict[str, str]:
     Returns:
         Dict[str, str]: Dictionary with loaded prompt templates
     """
-    templates = {}
+    templates: Dict[str, str] = {}
     
     if not PROMPTS_DIR.is_dir():
         logger.error(f"Prompts directory '{PROMPTS_DIR}' not found.")
@@ -191,7 +191,7 @@ def get_required_prompts_for_config(cfg: Dict[str, Any]) -> Dict[str, str]:
         Dict[str, str]: Dictionary with required prompt templates
     """
     prompts = get_prompts()
-    required_keys = ["vlm_base"]
+    required_keys: List[str] = ["vlm_base"]
     
     has_markdown = cfg.get("use_markitdown", False)
     has_summary = cfg.get("use_summary", False)

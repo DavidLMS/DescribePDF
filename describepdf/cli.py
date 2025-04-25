@@ -8,7 +8,7 @@ import argparse
 import os
 import sys
 import logging
-from typing import Dict, Any, Callable
+from typing import Dict, Any, Callable, Optional
 from tqdm import tqdm
 
 from . import config
@@ -160,8 +160,8 @@ def run_cli() -> None:
     }
     
     # Configure provider-specific settings
-    vlm_model = args.vlm_model
-    summary_model = args.summary_model
+    vlm_model: Optional[str] = args.vlm_model
+    summary_model: Optional[str] = args.summary_model
     
     if provider == "openrouter":
         run_config["openrouter_api_key"] = args.api_key if args.api_key else env_config.get("openrouter_api_key")
@@ -205,7 +205,7 @@ def run_cli() -> None:
     logger.info(f"Provider: {run_config['provider']}")
     
     if run_config['provider'] == 'openrouter':
-        if run_config['openrouter_api_key']:
+        if run_config.get('openrouter_api_key'):
             masked_key = '*' * 8 + run_config['openrouter_api_key'][-5:] if len(run_config['openrouter_api_key']) > 5 else '*****'
             logger.info(f"OpenRouter API Key: {masked_key}")
         else:
@@ -217,7 +217,7 @@ def run_cli() -> None:
     logger.info(f"Language: {run_config['output_language']}")
     logger.info(f"Markitdown: {'Yes' if run_config['use_markitdown'] else 'No'}")
     logger.info(f"Summary: {'Yes' if run_config['use_summary'] else 'No'}")
-    if run_config['use_summary']:
+    if run_config.get('use_summary') and run_config.get('summary_llm_model'):
         logger.info(f"Summary model: {run_config['summary_llm_model']}")
     
     # Create progress callback

@@ -23,7 +23,7 @@ except Exception as e:
     logger.error(f"Failed to initialize MarkItDown: {e}")
     MARKITDOWN_AVAILABLE = False
 
-def _get_markdown_converter():
+def _get_markdown_converter() -> Optional['MarkItDown']:
     """
     Initialize and return a MarkItDown converter instance.
     

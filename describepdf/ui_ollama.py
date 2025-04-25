@@ -10,7 +10,7 @@ import os
 import tempfile
 import logging
 import secrets
-from typing import Tuple, Optional
+from typing import Tuple, Optional, Dict, Any, List
 
 from . import config
 from . import core
@@ -24,7 +24,7 @@ def generate(
     ui_use_md: bool, 
     ui_use_sum: bool, 
     ui_sum_model: str, 
-    progress=gr.Progress(track_tqdm=True)
+    progress: gr.Progress = gr.Progress(track_tqdm=True)
 ) -> Tuple[str, gr.update, Optional[str]]:
     """
     Wrapper function to call the core conversion process and handle the Gradio UI for Ollama.
@@ -56,7 +56,7 @@ def generate(
         return error_msg, gr.update(value=None, visible=False), None
 
     # Prepare configuration for this run
-    current_run_config = {
+    current_run_config: Dict[str, Any] = {
         "provider": "ollama",
         "ollama_endpoint": ollama_endpoint,
         "vlm_model": ui_vlm_model,
@@ -133,9 +133,9 @@ def create_ui() -> gr.Blocks:
     initial_env_config = config.get_config()
 
     # Define suggested model lists and languages
-    suggested_vlms = ["llama3.2-vision"]
-    suggested_llms = ["qwen2.5", "llama3.2"]
-    suggested_languages = [
+    suggested_vlms: List[str] = ["llama3.2-vision"]
+    suggested_llms: List[str] = ["qwen2.5", "llama3.2"]
+    suggested_languages: List[str] = [
         "English", "Spanish", "French", "German", 
         "Chinese", "Japanese", "Italian", 
         "Portuguese", "Russian", "Korean"
@@ -252,7 +252,7 @@ def launch_app() -> None:
     
     This function creates the Gradio UI and launches it.
     """
-    app = create_ui()
+    app: gr.Blocks = create_ui()
     app.launch()
     
 if __name__ == "__main__":

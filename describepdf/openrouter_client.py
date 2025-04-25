@@ -60,12 +60,12 @@ def call_openrouter_api(api_key: str, model: str, messages: List[Dict[str, Any]]
         logger.error("OpenRouter API Key is missing.")
         raise ValueError("OpenRouter API Key is missing.")
 
-    headers = {
+    headers: Dict[str, str] = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
     }
     
-    payload = {
+    payload: Dict[str, Any] = {
         "model": model,
         "messages": messages
     }
@@ -134,7 +134,7 @@ def get_vlm_description(api_key: str, model: str, prompt_text: str, image_bytes:
     base64_image = encode_image_to_base64(image_bytes, mime_type)
 
     # Prepare messages for API
-    messages = [
+    messages: List[Dict[str, Any]] = [
         {
             "role": "user",
             "content": [
@@ -184,7 +184,7 @@ def get_llm_summary(api_key: str, model: str, prompt_text: str) -> str:
         TimeoutError: If API call times out
     """
     # Prepare messages for API
-    messages = [
+    messages: List[Dict[str, Any]] = [
         {"role": "user", "content": prompt_text}
     ]
 

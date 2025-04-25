@@ -8,6 +8,7 @@ VLM (Vision Language Model) image description and LLM text summarization.
 import logging
 import base64
 import requests
+from typing import Any, Dict, List
 
 # Try to import Ollama, but handle gracefully if it's not available
 try:
@@ -76,13 +77,13 @@ def get_vlm_description(endpoint: str, model: str, prompt_text: str, image_bytes
     
     try:
         # Create Ollama client
-        client = Client(host=endpoint.rstrip('/'))
+        client: Client = Client(host=endpoint.rstrip('/'))
         
         # Encode image to base64
         encoded_image = base64.b64encode(image_bytes).decode('utf-8')
         
         # Prepare messages for chat API
-        messages = [
+        messages: List[Dict[str, Any]] = [
             {
                 'role': 'user',
                 'content': prompt_text,
@@ -93,7 +94,7 @@ def get_vlm_description(endpoint: str, model: str, prompt_text: str, image_bytes
         logger.info(f"Calling Ollama VLM model: {model}")
         
         # Call Ollama chat API
-        response = client.chat(
+        response: Dict[str, Any] = client.chat(
             model=model,
             messages=messages
         )
@@ -136,10 +137,10 @@ def get_llm_summary(endpoint: str, model: str, prompt_text: str) -> str:
     
     try:
         # Create Ollama client
-        client = Client(host=endpoint.rstrip('/'))
+        client: Client = Client(host=endpoint.rstrip('/'))
         
         # Prepare messages for chat API
-        messages = [
+        messages: List[Dict[str, Any]] = [
             {
                 'role': 'user',
                 'content': prompt_text
@@ -149,7 +150,7 @@ def get_llm_summary(endpoint: str, model: str, prompt_text: str) -> str:
         logger.info(f"Calling Ollama LLM model for summary: {model}")
         
         # Call Ollama chat API
-        response = client.chat(
+        response: Dict[str, Any] = client.chat(
             model=model,
             messages=messages
         )

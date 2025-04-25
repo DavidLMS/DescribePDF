@@ -10,7 +10,7 @@ import os
 import tempfile
 import logging
 import secrets
-from typing import Tuple, Optional
+from typing import Tuple, Optional, Dict, Any, List
 
 from . import config
 from . import core
@@ -23,7 +23,7 @@ def generate(
     ui_use_md: bool, 
     ui_use_sum: bool, 
     ui_sum_model: str, 
-    progress=gr.Progress(track_tqdm=True)
+    progress: gr.Progress = gr.Progress(track_tqdm=True)
 ) -> Tuple[str, gr.update, Optional[str]]:
     """
     Wrapper function to call the core conversion process and handle the Gradio UI.
@@ -54,7 +54,7 @@ def generate(
     # Prepare configuration for this run
     api_key = ui_api_key.strip() if ui_api_key.strip() else env_config.get("openrouter_api_key")
 
-    current_run_config = {
+    current_run_config: Dict[str, Any] = {
         "provider": "openrouter",
         "openrouter_api_key": api_key,
         "vlm_model": ui_vlm_model,
@@ -137,19 +137,19 @@ def create_ui() -> gr.Blocks:
     initial_env_config = config.get_config()
 
     # Define suggested model lists and languages
-    suggested_vlms = [
+    suggested_vlms: List[str] = [
         "qwen/qwen2.5-vl-72b-instruct", 
         "google/gemini-2.5-pro-preview-03-25",
         "openai/chatgpt-4o-latest"
     ]
     
-    suggested_llms = [
+    suggested_llms: List[str] = [
         "google/gemini-2.5-flash-preview", 
         "openai/chatgpt-4o-latest",
         "anthropic/claude-3.5-sonnet"
     ]
     
-    suggested_languages = [
+    suggested_languages: List[str] = [
         "English", "Spanish", "French", "German", 
         "Chinese", "Japanese", "Italian", 
         "Portuguese", "Russian", "Korean"
@@ -267,7 +267,7 @@ def launch_app() -> None:
     
     This function creates the Gradio UI and launches it.
     """
-    app = create_ui()
+    app: gr.Blocks = create_ui()
     app.launch()
     
 if __name__ == "__main__":

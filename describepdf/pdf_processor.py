@@ -13,7 +13,6 @@ from typing import Tuple, List, Optional
 # Get logger from config module
 from .config import logger
 
-# Import PyMuPDF
 try:
     import pymupdf
     PYMUPDF_AVAILABLE = True
@@ -79,6 +78,11 @@ def render_page_to_image_bytes(page: pymupdf.Page, image_format: str = "jpeg", d
         return None, None
         
     try:
+        # Validate image format
+        if image_format.lower() not in ["png", "jpeg"]:
+            logger.error(f"Unsupported image format: {image_format}")
+            return None, None
+            
         # Render page to pixmap
         pix = page.get_pixmap(dpi=dpi)
         img_bytes_io = io.BytesIO()
@@ -89,13 +93,10 @@ def render_page_to_image_bytes(page: pymupdf.Page, image_format: str = "jpeg", d
             img_bytes_io.write(img_bytes)
             mime_type = "image/png"
         elif image_format.lower() == "jpeg":
-            # Use PIL for JPEG conversion (better quality control)
+            # Use PIL for JPEG conversion
             img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
-            img.save(img_bytes_io, format="JPEG", quality=85)  # Adjust JPEG quality
+            img.save(img_bytes_io, format="JPEG", quality=85)
             mime_type = "image/jpeg"
-        else:
-            logger.error(f"Unsupported image format: {image_format}")
-            return None, None
 
         img_bytes_io.seek(0)
         logger.debug(f"Rendered page {page.number + 1} to {image_format.upper()} bytes.")
