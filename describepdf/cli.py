@@ -1,14 +1,27 @@
+"""
+Command-line interface for DescribePDF.
+
+This module provides the CLI functionality for converting PDF files to markdown descriptions.
+"""
+
 import argparse
 import os
 import logging
 import sys
+from typing import Dict, Any, Callable
 from tqdm import tqdm
+
 from . import config
 from . import core
 from . import ollama_client
 
-def setup_cli_parser():
-    """Set up the command line argument parser."""
+def setup_cli_parser() -> argparse.ArgumentParser:
+    """
+    Set up the command line argument parser.
+    
+    Returns:
+        argparse.ArgumentParser: Configured parser for command line arguments
+    """
     parser = argparse.ArgumentParser(
         description="DescribePDF - Convert PDF files to detailed Markdown descriptions",
         epilog="Example: describepdf input.pdf -o output.md -l Spanish"
@@ -75,47 +88,75 @@ def setup_cli_parser():
 
     return parser
 
-def cli_progress_callback(progress_value, status):
-    """Callback to display progress in the command line."""
-    if not hasattr(cli_progress_callback, "pbar"):
-        cli_progress_callback.pbar = tqdm(total=100, desc="Processing", unit="%")
+def create_progress_callback() -> Callable[[float, str], None]:
+    """
+    Create a progress callback function that displays progress with tqdm.
     
-    current_progress = int(progress_value * 100)
-    previous_progress = getattr(cli_progress_callback, "last_progress", 0)
-    progress_diff = current_progress - previous_progress
+    Returns:
+        Callable[[float, str], None]: Progress callback function
+    """
+    progress_bar = tqdm(total=100, desc="Processing", unit="%")
+    last_progress = 0
     
-    if progress_diff > 0:
-        cli_progress_callback.pbar.update(progress_diff)
-        cli_progress_callback.last_progress = current_progress
+    def callback(progress_value: float, status: str) -> None:
+        """
+        Display progress in the command line.
+        
+        Args:
+            progress_value (float): Progress value between 0.0 and 1.0
+            status (str): Current status message
+        """
+        nonlocal last_progress
+        
+        current_progress = int(progress_value * 100)
+        progress_diff = current_progress - last_progress
+        
+        if progress_diff > 0:
+            progress_bar.update(progress_diff)
+            last_progress = current_progress
+        
+        progress_bar.set_description(status)
+        
+        if progress_value >= 1.0:
+            progress_bar.close()
     
-    cli_progress_callback.pbar.set_description(status)
-    
-    if progress_value >= 1.0:
-        cli_progress_callback.pbar.close()
+    return callback
 
-def run_cli():
-    """Main function for the command line interface."""
+def run_cli() -> None:
+    """
+    Main function for the command line interface.
+    
+    This function parses arguments, configures the application based on 
+    provided parameters, and runs the PDF to Markdown conversion.
+    """
+    # Parse command line arguments
     parser = setup_cli_parser()
     args = parser.parse_args()
     
+    # Configure logging based on verbosity
     log_level = logging.DEBUG if args.verbose else logging.INFO
     logging.basicConfig(level=log_level, format='%(asctime)s - %(levelname)s - [%(module)s] - %(message)s')
     
+    # Validate input file exists
     if not os.path.exists(args.pdf_file) or not os.path.isfile(args.pdf_file):
         print(f"Error: The PDF file '{args.pdf_file}' does not exist or is not a valid file.")
         sys.exit(1)
     
+    # Load configuration from environment
     env_config = config.get_config()
     
+    # Determine provider
     provider = "ollama" if args.local else "openrouter"
     
-    run_config = {
+    # Prepare run configuration by merging environment config and CLI args
+    run_config: Dict[str, Any] = {
         "provider": provider,
         "output_language": args.language if args.language else env_config.get("output_language"),
-        "use_markitdown": args.use_markitdown if args.use_markitdown else env_config.get("use_markitdown"),
-        "use_summary": args.use_summary if args.use_summary else env_config.get("use_summary"),
+        "use_markitdown": args.use_markitdown if args.use_markitdown is not None else env_config.get("use_markitdown"),
+        "use_summary": args.use_summary if args.use_summary is not None else env_config.get("use_summary"),
     }
     
+    # Configure provider-specific settings
     vlm_model = args.vlm_model
     summary_model = args.summary_model
     
@@ -153,17 +194,16 @@ def run_cli():
     if run_config["use_summary"]:
         run_config["summary_llm_model"] = summary_model
     
-    class FileObj:
-        def __init__(self, path):
-            self.name = path
-    
-    pdf_file_obj = FileObj(args.pdf_file)
-    
+    # Print configuration summary
     print(f"Processing PDF: {os.path.basename(args.pdf_file)}")
     print(f"Provider: {run_config['provider']}")
     
     if run_config['provider'] == 'openrouter':
-        print(f"OpenRouter API Key: {'*' * 8}{run_config['openrouter_api_key'][-5:] if run_config['openrouter_api_key'] else 'Not provided'}")
+        if run_config['openrouter_api_key']:
+            masked_key = '*' * 8 + run_config['openrouter_api_key'][-5:] if len(run_config['openrouter_api_key']) > 5 else '*****'
+            print(f"OpenRouter API Key: {masked_key}")
+        else:
+            print("OpenRouter API Key: Not provided")
     else:
         print(f"Ollama Endpoint: {run_config['ollama_endpoint']}")
     
@@ -175,21 +215,27 @@ def run_cli():
         print(f"Summary model: {run_config['summary_llm_model']}")
     print("")
     
+    # Create progress callback
+    progress_callback = create_progress_callback()
+    
+    # Run conversion
     status, markdown_result = core.convert_pdf_to_markdown(
-        pdf_file_obj,
+        args.pdf_file,
         run_config,
-        cli_progress_callback
+        progress_callback
     )
     
     if not markdown_result:
         print(f"\nError: {status}")
         sys.exit(1)
     
+    # Determine output filename
     output_filename = args.output
     if not output_filename:
         base_name = os.path.splitext(os.path.basename(args.pdf_file))[0]
         output_filename = f"{base_name}_description.md"
     
+    # Save output file
     try:
         with open(output_filename, "w", encoding="utf-8") as md_file:
             md_file.write(markdown_result)
