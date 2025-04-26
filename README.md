@@ -13,7 +13,7 @@
 
 DescribePDF is an open-source tool designed to convert PDF files into detailed page-by-page descriptions in Markdown format using Vision-Language Models (VLMs). Unlike traditional PDF extraction tools that focus on replicating the text layout, DescribePDF generates rich, contextual descriptions of each page's content, making it perfect for visually complex documents like catalogs, scanned documents, and presentations.
 
-> **Important Note:** DescribePDF is designed to help you make PDF content accessible and searchable in contexts where traditional text extraction fails. It's particularly useful for creating descriptive content that can be indexed in RAG systems or for making visual documents accessible to people with visual impairments.
+> **Note:** DescribePDF is designed to help you make PDF content accessible and searchable in contexts where traditional text extraction fails. It's particularly useful for creating descriptive content that can be indexed in RAG systems or for making visual documents accessible to people with visual impairments.
 
 <p align="center">
     <a href="https://huggingface.co/spaces/davidlms/describepdf">Demo</a>
@@ -53,7 +53,6 @@ DescribePDF is an open-source tool designed to convert PDF files into detailed p
 - 🔍 **Context-Aware Descriptions** - Generates descriptions that understand the document's overall structure and purpose
 - 🌐 **Multilingual Support** - Generate descriptions in multiple languages
 - 📊 **Enhanced Extraction with Markitdown** - Optional integration with Markitdown for better text extraction
-- 📝 **Document Summarization** - Optional generation of overall document summaries
 - ☁️ **Cloud Model Support** - Compatible with powerful VLMs through OpenRouter
 - 💻 **Local Model Support** - Works with local models via Ollama
 - 🖥️ **Dual Interface** - Available as both a web UI and command-line tool
@@ -115,8 +114,12 @@ Try DescribePDF without installation:
 ### Quick CLI Example
 
 ```bash
-# Install the package
-pip install describepdf
+# Clone the repository
+git clone https://github.com/DavidLMS/DescribePDF.git
+cd DescribePDF
+
+# Install the package locally
+pip install -e .
 
 # Process a PDF with default settings (OpenRouter)
 describepdf document.pdf
@@ -133,21 +136,36 @@ describepdf document.pdf --local
 - For OpenRouter: An API key from [OpenRouter](https://openrouter.ai)
 - For local models: [Ollama](https://ollama.ai) installed and running
 
-### Option 1: Install with pip
+### Option 1: Install from source
 
 ```bash
-pip install describepdf
+# Clone the repository
+git clone https://github.com/DavidLMS/DescribePDF.git
+cd DescribePDF
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Install the package
+pip install -e .
 ```
 
 ### Option 2: Install with venv
 
 ```bash
+# Clone the repository
+git clone https://github.com/DavidLMS/DescribePDF.git
+cd DescribePDF
+
 # Create and activate a virtual environment
 python -m venv describepdf-env
 source describepdf-env/bin/activate  # On Windows: describepdf-env\Scripts\activate
 
+# Install dependencies
+pip install -r requirements.txt
+
 # Install the package
-pip install describepdf
+pip install -e .
 ```
 
 ### Option 3: Install with uv
@@ -156,12 +174,19 @@ pip install describepdf
 # Install uv if you don't have it
 pip install uv
 
+# Clone the repository
+git clone https://github.com/DavidLMS/DescribePDF.git
+cd DescribePDF
+
 # Create and activate a virtual environment
 uv venv
 source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 
+# Install dependencies
+uv pip install -r requirements.txt
+
 # Install the package
-uv pip install describepdf
+uv pip install -e .
 ```
 
 ### Configuration
@@ -254,7 +279,7 @@ DescribePDF provides two web interfaces powered by Gradio:
 #### OpenRouter Interface
 
 ```bash
-# Start the OpenRouter web interface
+# Start the OpenRouter Gradio interface
 describepdf-web
 
 # Alternatively
@@ -264,50 +289,27 @@ python -m describepdf.ui
 #### Ollama Interface
 
 ```bash
-# Start the Ollama web interface
+# Start the Ollama Gradio interface
 describepdf-web-ollama
 
 # Alternatively
 python -m describepdf.ui_ollama
 ```
 
-### Python API
+### API
 
-You can also use DescribePDF programmatically in your Python code:
+You can use DescribePDF in your production applications by leveraging the Gradio API interface. This allows you to run the web interface as a service and make API calls to it from Python, JavaScript, or directly using Bash/cURL.
+To use the API, you first need to start the Gradio interface as a server:
 
-```python
-from describepdf.core import convert_pdf_to_markdown
+```bash
+# For OpenRouter interface
+describepdf-web
 
-# Configure the conversion
-config = {
-    "provider": "openrouter",  # or "ollama"
-    "openrouter_api_key": "your_api_key",  # for OpenRouter
-    "ollama_endpoint": "http://localhost:11434",  # for Ollama
-    "vlm_model": "qwen/qwen2.5-vl-72b-instruct",  # or any supported model
-    "output_language": "English",
-    "use_markitdown": True,
-    "use_summary": False
-}
-
-# Define a progress callback (optional)
-def progress_callback(progress_value, status):
-    print(f"{status} - {progress_value*100:.0f}%")
-
-# Convert PDF to Markdown
-status, markdown = convert_pdf_to_markdown(
-    "document.pdf",
-    config,
-    progress_callback
-)
-
-# Save the result
-if markdown:
-    with open("result.md", "w", encoding="utf-8") as f:
-        f.write(markdown)
-    print(f"Success: {status}")
-else:
-    print(f"Error: {status}")
+# For Ollama interface
+describepdf-web-ollama
 ```
+
+The Gradio API automatically provides endpoints that can be accessed through various methods. Complete API documentation is available by clicking the `Use via API` link in the web interface once the server is running.
 
 ## Customization
 
@@ -325,29 +327,38 @@ You can modify these templates to customize the descriptions generated by the mo
 
 ### Model Selection
 
-DescribePDF supports a variety of models:
+DescribePDF leverages the capabilities of both OpenRouter and Ollama, giving you access to a wide range of models:
 
-#### OpenRouter Models:
-- VLM: `qwen/qwen2.5-vl-72b-instruct`, `google/gemini-2.5-pro-preview`, `openai/chatgpt-4o-latest`
-- Summary: `google/gemini-2.5-flash-preview`, `anthropic/claude-3.5-sonnet`
+#### OpenRouter Support
+DescribePDF supports **all** vision-capable models available on OpenRouter platform, as well as all text-based LLMs for summary generation. The dropdown menus in the interface show recommended models, but you can use any model by typing its name.
 
-#### Ollama Models:
-- VLM: `llama3.2-vision`, `bakllava` (recommended to have at least 16GB VRAM)
-- Summary: `qwen2.5`, `mistral-small3.1`, `llama3.2`
+#### Ollama Support
+Similarly, DescribePDF works with **all** vision models and LLMs available in your Ollama installation. This gives you flexibility to use any model you have pulled locally.
+
+#### Recommended Models
+
+As of the current release, these models have been tested and provide excellent results:
+
+**OpenRouter:**
+- VLM: `qwen/qwen2.5-vl-72b-instruct`
+- Summary: `google/gemini-2.5-flash-preview`
+
+> **Note:** Currently, the large models available through OpenRouter generally produce significantly better results than local Ollama models, especially for complex documents with detailed visuals. If quality is your priority and you have an API key, OpenRouter is recommended. However, keep in mind that documents processed through OpenRouter will be shared with the respective model providers according to their privacy policies.
+
+**Ollama:**
+- VLM: `llama3.2-vision`
+- Summary: `qwen2.5`
+
+The performance and availability of models may change over time as new models are released.
 
 ## Future Development
 
 The DescribePDF project is under active development. Future plans include:
 
-- **Enhanced Table Detection**: Improved recognition and description of tabular data
-- **Figure and Chart Analysis**: More detailed analysis of charts, graphs, and figures
-- **Document Comparison**: Tools for comparing descriptions of multiple versions of a document
-- **Custom Parser Integration**: Support for domain-specific parsers for specialized documents
-- **API Service**: Creating a standalone API for integration with other applications
-- **Batch Processing**: Tools for efficient processing of multiple PDFs
-- **Text-to-Speech Integration**: Add options to generate audio narrations of descriptions
-- **Fine-tuned Models**: Develop specialized models for specific document types
-- **Domain-Specific Prompt Templates**: Create templates optimized for legal, medical, technical, and other specialized content
+- **Document Comparison**: Tools for comparing descriptions of multiple versions of a document.
+- **Batch Processing**: Tools for efficient processing of multiple PDFs.
+- **Text-to-Speech Integration**: Add options to generate audio narrations of descriptions.
+- **Domain-Specific Prompt Templates**: Create templates optimized for legal, medical, technical, and other specialized content.
 
 ## License
 
