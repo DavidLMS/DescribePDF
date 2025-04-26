@@ -172,7 +172,7 @@ def create_ui() -> gr.Blocks:
 
     # Create the Gradio interface
     with gr.Blocks(title="DescribePDF", theme=theme) as iface:
-        gr.Markdown("<center><img src='./assets/logo.png' alt='Describe PDF Logo'/></center>")
+        gr.Markdown("<center><img src='https://davidlms.github.io/DescribePDF/assets/poster.png' alt='Describe PDF Logo' width='600px'/></center>")
         gr.Markdown(
             """<div style="display: flex;align-items: center;justify-content: center">
             [<a href="https://davidlms.github.io/describepdf/">Project Page</a>] | [<a href="https://github.com/DavidLMS/describepdf">Github</a>]</div>
