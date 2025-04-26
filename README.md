@@ -24,6 +24,8 @@ DescribePDF is an open-source tool designed to convert PDF files into detailed p
     <a href="https://github.com/DavidLMS/DescribePDF/issues/new?assignees=&labels=bug&projects=&template=bug_report.md&title=%5BBUG%5D">Report Bug</a>
     ·
     <a href="https://github.com/DavidLMS/DescribePDF/issues/new?assignees=&labels=enhancement&projects=&template=feature_request.md&title=%5BREQUEST%5D">Request Feature</a>
+  ·
+    <a href="https://github.com/DavidLMS/DescribePDF/wiki">Wiki</a>
 </p>
 
 ## Table of Contents
