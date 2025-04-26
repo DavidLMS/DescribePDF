@@ -7,6 +7,9 @@
   <a href="LICENSE">
       <img src="https://img.shields.io/badge/License-MIT-yellow.svg?longCache=true" alt="MIT License">
     </a>
+  <a href="https://huggingface.co/spaces/davidlms/describepdf">
+  <img src="https://img.shields.io/badge/🤗%20Hugging%20Face%20-Space-yellow" alt="HuggingFace Space">
+</a>
 </p>
 
 # DescribePDF
