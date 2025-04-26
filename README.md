@@ -108,7 +108,7 @@ DescribePDF differentiates itself from other PDF processing tools by focusing on
 Try DescribePDF without installation:
 
 <a href="https://huggingface.co/spaces/davidlms/describepdf">
-  <img src="https://img.shields.io/badge/Demo-HuggingFace-yellow?style=for-the-badge&logo=huggingface" alt="HuggingFace Space">
+  <img src="https://img.shields.io/badge/🤗%20Hugging%20Face%20-Space-yellow" alt="HuggingFace Space">
 </a>
 
 ### Quick CLI Example
