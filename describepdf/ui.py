@@ -172,12 +172,16 @@ def create_ui() -> gr.Blocks:
 
     # Create the Gradio interface
     with gr.Blocks(title="DescribePDF", theme=theme) as iface:
-        gr.Markdown("# DescribePDF - Visual PDF to Markdown extensive description")
+        gr.Markdown("<center><img src='./assets/logo.png' alt='Describe PDF Logo'/></center>")
         gr.Markdown(
-            "This application converts PDF files into Markdown format using a Vision Language Model (VLM) "
-            "to describe each page's content.\n"
+            """<div style="display: flex;align-items: center;justify-content: center">
+            [<a href="https://davidlms.github.io/describepdf/">Project Page</a>] | [<a href="https://github.com/DavidLMS/describepdf">Github</a>]</div>
+            """
+        )
+        gr.Markdown(
+            "DescribePDF is an open-source tool designed to convert PDF files into detailed page-by-page descriptions in Markdown format using Vision-Language Models (VLMs). Unlike traditional PDF extraction tools that focus on replicating the text layout, DescribePDF generates rich, contextual descriptions of each page's content, making it perfect for visually complex documents like catalogs, scanned documents, and presentations."
+            "\n\n"
             "Upload a PDF, adjust settings, and click 'Describe'. "
-            "Default settings are loaded from the `.env` file on startup. Settings chosen here apply only to the current conversion."
         )
 
         with gr.Tabs():
