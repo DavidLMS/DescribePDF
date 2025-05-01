@@ -6,7 +6,7 @@ and prompt templates from files.
 """
 import os
 import logging
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from dotenv import load_dotenv
 import pathlib
 
