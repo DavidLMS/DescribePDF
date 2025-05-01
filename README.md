@@ -24,7 +24,7 @@ DescribePDF is an open-source tool designed to convert PDF files into detailed p
     <a href="https://github.com/DavidLMS/DescribePDF/issues/new?assignees=&labels=bug&projects=&template=bug_report.md&title=%5BBUG%5D">Report Bug</a>
     ·
     <a href="https://github.com/DavidLMS/DescribePDF/issues/new?assignees=&labels=enhancement&projects=&template=feature_request.md&title=%5BREQUEST%5D">Request Feature</a>
-  ·
+    ·
     <a href="https://github.com/DavidLMS/DescribePDF/wiki">Wiki</a>
 </p>
 
@@ -56,6 +56,7 @@ DescribePDF is an open-source tool designed to convert PDF files into detailed p
 
 - 📄 **Comprehensive Page Analysis** - Detailed descriptions of each page's visual and textual content
 - 🔍 **Context-Aware Descriptions** - Generates descriptions that understand the document's overall structure and purpose
+- 📑 **Selective Page Processing** - Process only specific pages or ranges for targeted analysis and faster results
 - 🌐 **Multilingual Support** - Generate descriptions in multiple languages
 - 📊 **Enhanced Extraction with Markitdown** - Optional integration with Markitdown for better text extraction
 - ☁️ **Cloud Model Support** - Compatible with powerful VLMs through OpenRouter
@@ -217,6 +218,7 @@ DEFAULT_OLLAMA_SUMMARY_MODEL="mistral-small3.1"
 DEFAULT_LANGUAGE="English"
 DEFAULT_USE_MARKITDOWN="true"
 DEFAULT_USE_SUMMARY="false"
+DEFAULT_PAGE_SELECTION=""
 ```
 
 ## Usage
@@ -237,6 +239,9 @@ describepdf document.pdf -o result.md
 
 # Change the output language
 describepdf document.pdf -l Spanish
+
+# Process only specific pages
+describepdf document.pdf --pages "1,3,5-10,15"
 
 # Use Markitdown and summary generation
 describepdf document.pdf --use-markitdown --use-summary
@@ -270,6 +275,7 @@ optional arguments:
                         VLM model to use
   -l LANGUAGE, --language LANGUAGE
                         Output language
+  --pages PAGES         Pages to process (e.g. '1,3,5-10,15')
   --use-markitdown      Use Markitdown for enhanced text extraction
   --use-summary         Generate and use a PDF summary
   --summary-model SUMMARY_MODEL

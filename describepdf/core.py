@@ -24,22 +24,87 @@ class ConversionError(Exception):
     """Error raised during PDF conversion process."""
     pass
 
-def format_markdown_output(descriptions: List[str], original_filename: str) -> str:
+def parse_page_selection(selection_string: Optional[str], total_pages: int) -> List[int]:
+    """
+    Parse a page selection string into a list of page indices.
+    
+    Args:
+        selection_string: String with page selection (e.g. "1,3,5-10,15")
+        total_pages: Total number of pages in the document
+        
+    Returns:
+        List[int]: List of zero-based page indices to process
+    """
+    if not selection_string:
+        # Return all pages if selection is empty
+        return list(range(total_pages))
+        
+    page_indices = []
+    
+    try:
+        sections = selection_string.split(',')
+        for section in sections:
+            section = section.strip()
+            if not section:
+                continue
+                
+            if '-' in section:
+                # Handle page range
+                start, end = section.split('-', 1)
+                start_idx = int(start.strip()) - 1  # Convert to 0-based index
+                end_idx = int(end.strip()) - 1
+                
+                # Validate range
+                if start_idx < 0 or end_idx >= total_pages or start_idx > end_idx:
+                    logger.warning(f"Invalid page range: {section}. Must be between 1 and {total_pages}.")
+                    continue
+                    
+                page_indices.extend(range(start_idx, end_idx + 1))
+            else:
+                # Handle single page
+                page_idx = int(section) - 1  # Convert to 0-based index
+                
+                # Validate page number
+                if page_idx < 0 or page_idx >= total_pages:
+                    logger.warning(f"Invalid page number: {section}. Must be between 1 and {total_pages}.")
+                    continue
+                    
+                page_indices.append(page_idx)
+        
+        # Remove duplicates and sort
+        page_indices = sorted(set(page_indices))
+        
+        if not page_indices:
+            logger.warning("No valid pages specified. Processing all pages.")
+            return list(range(total_pages))
+            
+        return page_indices
+        
+    except ValueError as e:
+        logger.error(f"Error parsing page selection '{selection_string}': {e}. Processing all pages.")
+        return list(range(total_pages))
+
+def format_markdown_output(descriptions: List[str], original_filename: str, page_numbers: Optional[List[int]] = None) -> str:
     """
     Combine page descriptions into a single Markdown file.
 
     Args:
         descriptions: List of strings, each being a description of a page
         original_filename: Name of the original PDF file
+        page_numbers: List of actual page numbers corresponding to descriptions (1-based)
 
     Returns:
         str: Complete Markdown content
     """
     md_content = f"# Description of PDF: {original_filename}\n\n"
+    
     for i, desc in enumerate(descriptions):
-        md_content += f"## Page {i + 1}\n\n"
+        # Use actual page number if provided, otherwise use sequential numbering
+        page_num = page_numbers[i] if page_numbers else (i + 1)
+        md_content += f"## Page {page_num}\n\n"
         md_content += desc if desc else "*No description generated for this page.*"
         md_content += "\n\n---\n\n"
+    
     return md_content
 
 def convert_pdf_to_markdown(
@@ -175,7 +240,17 @@ def convert_pdf_to_markdown(
             page_processing_progress_start = pdf_load_progress
             total_page_progress_ratio = (0.98 - page_processing_progress_start) if total_pages > 0 else 0
 
-            for i, page in enumerate(pages):
+            # Parse page selection
+            page_selection = cfg.get("page_selection")
+            selected_indices = parse_page_selection(page_selection, total_pages)
+
+            if page_selection:
+                logger.info(f"Processing {len(selected_indices)} selected pages out of {total_pages} total pages.")
+            else:
+                logger.info(f"Processing all {total_pages} pages.")
+
+            for i in selected_indices:
+                page = pages[i]
                 page_num = i + 1
                 current_page_ratio = (page_num / total_pages) if total_pages > 0 else 1.0
                 
@@ -306,7 +381,10 @@ def convert_pdf_to_markdown(
         # Generate final markdown
         final_progress = 0.99
         progress_callback(final_progress, "Combining page descriptions into final Markdown...")
-        final_markdown = format_markdown_output(all_descriptions, original_filename)
+
+        actual_page_numbers = [i + 1 for i in selected_indices] if 'selected_indices' in locals() else None
+
+        final_markdown = format_markdown_output(all_descriptions, original_filename, actual_page_numbers)
         logger.info("Final Markdown content assembled.")
 
         # Report completion
