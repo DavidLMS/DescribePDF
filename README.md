@@ -310,6 +310,7 @@ python -m describepdf.ui_ollama
 ### API
 
 You can use DescribePDF in your production applications by leveraging the Gradio API interface. This allows you to run the web interface as a service and make API calls to it from Python, JavaScript, or directly using Bash/cURL.
+
 To use the API, you first need to start the Gradio interface as a server:
 
 ```bash
@@ -321,6 +322,30 @@ describepdf-web-ollama
 ```
 
 The Gradio API automatically provides endpoints that can be accessed through various methods. Complete API documentation is available by clicking the `Use via API` link in the web interface once the server is running.
+
+#### MCP Server (Model Context Protocol)
+
+Starting with Gradio 5.28.0, you can run the application as an MCP server by setting an environment variable:
+
+```bash
+# Enable MCP server
+export GRADIO_MCP_SERVER=true
+
+# For OpenRouter interface
+describepdf-web
+
+# For Ollama interface
+describepdf-web-ollama
+```
+
+The Model Context Protocol (MCP) standardizes how AI models interact with external tools. By enabling MCP:
+
+- AI assistants like Claude can directly use your DescribePDF application as a tool
+- Large Language Models can understand your application's capabilities and interface with it
+- Functions in your Gradio app are automatically converted to MCP tools with proper schemas
+- You become part of the growing ecosystem of interconnected AI tools
+
+This is particularly useful for integrating DescribePDF into AI workflows or when you want an LLM to generate PDF descriptions through API calls without human intervention.
 
 ## Customization
 
