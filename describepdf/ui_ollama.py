@@ -22,7 +22,7 @@ theme = gr.themes.Soft(
     spacing_size="lg",
 )
 
-def generate(
+def convert_pdf_to_descriptive_markdown(
     pdf_file_obj: Optional[gr.File], 
     ollama_endpoint: str, 
     ui_vlm_model: str, 
@@ -33,22 +33,31 @@ def generate(
     progress: gr.Progress = gr.Progress(track_tqdm=True)
 ) -> Tuple[str, gr.update, Optional[str]]:
     """
-    Wrapper function to call the core conversion process and handle the Gradio UI for Ollama.
+    Convert a PDF file to detailed page-by-page Markdown descriptions using local Ollama Vision-Language Models.
+    
+    This function processes the uploaded PDF, analyzing the visual and textual content of each page
+    using locally hosted Vision-Language Models (VLMs) through Ollama. It generates rich, contextual 
+    descriptions in Markdown format that capture both the visual elements and text content of the document, 
+    making the PDF accessible and searchable in contexts where traditional text extraction would fail.
+    
+    Unlike the OpenRouter version, this function utilizes local models running through Ollama, 
+    providing privacy and eliminating the need for API keys, but potentially with different model options
+    and performance characteristics.
     
     Args:
         pdf_file_obj: Gradio File object for the uploaded PDF
-        ollama_endpoint: Ollama server endpoint URL
-        ui_vlm_model: VLM model name from UI
-        ui_lang: Output language from UI
-        ui_use_md: Whether to use Markitdown from UI
-        ui_use_sum: Whether to generate a summary from UI
-        ui_sum_model: Summary model name from UI
+        ollama_endpoint: Ollama server endpoint URL (e.g., http://localhost:11434)
+        ui_vlm_model: VLM model name from UI (e.g., llama3.2-vision)
+        ui_lang: Output language for descriptions (e.g., English, Spanish)
+        ui_use_md: Whether to use Markitdown for enhanced text extraction
+        ui_use_sum: Whether to generate a document summary for context
+        ui_sum_model: Summary model name from UI (e.g., qwen2.5)
         progress: Gradio progress tracker
         
     Returns:
         Tuple containing:
-        - str: Status message
-        - gr.update: Download button update
+        - str: Status message indicating success or failure
+        - gr.update: Download button update with the result file
         - Optional[str]: Markdown result content
     """
     # Validate input file
@@ -249,7 +258,7 @@ def create_ui() -> gr.Blocks:
             progress_output, download_button, markdown_output
         ]
         convert_button.click(
-            fn=generate,
+            fn=convert_pdf_to_descriptive_markdown,
             inputs=conversion_inputs,
             outputs=conversion_outputs
         )
