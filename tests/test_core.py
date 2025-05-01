@@ -411,3 +411,74 @@ class TestCore:
             
             # Verify document was closed
             mock_doc.close.assert_called_once()
+    
+    def test_parse_page_selection_empty(self):
+        """Test parsing empty page selection (should return all pages)."""
+        # Execute test
+        result = core.parse_page_selection(None, 10)
+        
+        # Assert results
+        assert result == list(range(10))
+        assert len(result) == 10
+
+    def test_parse_page_selection_individual(self):
+        """Test parsing individual page selection."""
+        # Execute test
+        result = core.parse_page_selection("1,3,5", 10)
+        
+        # Assert results
+        assert result == [0, 2, 4]  # 0-based indices
+        assert len(result) == 3
+
+    def test_parse_page_selection_range(self):
+        """Test parsing page range selection."""
+        # Execute test
+        result = core.parse_page_selection("2-5", 10)
+        
+        # Assert results
+        assert result == [1, 2, 3, 4]  # 0-based indices
+        assert len(result) == 4
+
+    def test_parse_page_selection_mixed(self):
+        """Test parsing mixed individual and range selection."""
+        # Execute test
+        result = core.parse_page_selection("1,3-5,8", 10)
+        
+        # Assert results
+        assert result == [0, 2, 3, 4, 7]  # 0-based indices
+        assert len(result) == 5
+
+    def test_parse_page_selection_invalid(self):
+        """Test parsing invalid page selection."""
+        # Execute test - out of range page
+        result = core.parse_page_selection("11,15", 10)
+        
+        # Assert results - should return all pages when all specified pages are invalid
+        assert result == list(range(10))
+        assert len(result) == 10
+        
+        # Execute test - invalid format
+        result = core.parse_page_selection("a,b,c", 10)
+        
+        # Assert results - should return all pages on parsing error
+        assert result == list(range(10))
+        assert len(result) == 10
+
+    def test_format_markdown_output_with_page_numbers(self):
+        """Test formatting of markdown output with specified page numbers."""
+        # Setup test data
+        descriptions = ["Page 1 content", "Page 5 content", "Page 10 content"]
+        page_numbers = [1, 5, 10]  # Actual page numbers
+        filename = "test.pdf"
+        
+        # Execute test
+        result = core.format_markdown_output(descriptions, filename, page_numbers)
+        
+        # Assert results
+        assert "# Description of PDF: test.pdf" in result
+        assert "## Page 1" in result
+        assert "## Page 5" in result
+        assert "## Page 10" in result
+        assert "Page 1 content" in result
+        assert "Page 5 content" in result
+        assert "Page 10 content" in result

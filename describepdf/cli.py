@@ -62,6 +62,10 @@ def setup_cli_parser() -> argparse.ArgumentParser:
     )
     
     parser.add_argument(
+        "--pages", 
+        help="Pages to process (e.g. '1,3,5-10,15'). Default: all pages."
+    )
+    parser.add_argument(
         "-l", "--language", 
         help="Output language (default: configured in .env)"
     )
@@ -157,6 +161,7 @@ def run_cli() -> None:
         "output_language": args.language if args.language else env_config.get("output_language"),
         "use_markitdown": args.use_markitdown if args.use_markitdown is not None else env_config.get("use_markitdown"),
         "use_summary": args.use_summary if args.use_summary is not None else env_config.get("use_summary"),
+        "page_selection": args.pages if args.pages else env_config.get("page_selection")
     }
     
     # Configure provider-specific settings
@@ -219,6 +224,11 @@ def run_cli() -> None:
     logger.info(f"Summary: {'Yes' if run_config['use_summary'] else 'No'}")
     if run_config.get('use_summary') and run_config.get('summary_llm_model'):
         logger.info(f"Summary model: {run_config['summary_llm_model']}")
+
+    if run_config.get('page_selection'):
+        logger.info(f"Page selection: {run_config['page_selection']}")
+    else:
+        logger.info("Page selection: All pages")
     
     # Create progress callback
     progress_callback = create_progress_callback()

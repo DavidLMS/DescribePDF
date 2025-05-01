@@ -134,7 +134,8 @@ def env_config_dict():
         "ollama_summary_model": "qwen2.5",
         "output_language": "English",
         "use_markitdown": False,
-        "use_summary": False
+        "use_summary": False,
+        "page_selection": None
     }
 
 @pytest.fixture

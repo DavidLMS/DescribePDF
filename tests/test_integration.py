@@ -169,3 +169,48 @@ class TestIntegration:
             args = core.openrouter_client.get_vlm_description.call_args[0]
             # The prompt should contain both markdown and summary context
             assert "Full prompt with" in args[2]
+      
+    def test_end_to_end_with_page_selection(self, temp_pdf_file, sample_image_bytes, mock_openrouter_response, mock_config):
+      """Test full conversion flow with page selection."""
+      # Setup test
+      test_config = {
+            "provider": "openrouter",
+            "openrouter_api_key": "test_api_key",
+            "vlm_model": "qwen/qwen2.5-vl-72b-instruct",
+            "output_language": "English",
+            "use_markitdown": False,
+            "use_summary": False,
+            "page_selection": "1,3"
+      }
+      
+      # Mock progress callback
+      progress_callback = MagicMock()
+      
+      # Mock document and pages
+      mock_doc = MagicMock()
+      mock_page1 = MagicMock(number=0)
+      mock_page2 = MagicMock(number=1)
+      mock_page3 = MagicMock(number=2)
+      
+      # Set up all required mocks for a successful flow
+      with patch('os.path.exists', return_value=True), \
+            patch('os.path.isfile', return_value=True), \
+            patch('describepdf.core.pdf_processor.get_pdf_pages', 
+                  return_value=(mock_doc, [mock_page1, mock_page2, mock_page3], 3)), \
+            patch('describepdf.core.pdf_processor.render_page_to_image_bytes', 
+                  return_value=(sample_image_bytes, "image/jpeg")), \
+            patch('describepdf.core.openrouter_client.encode_image_to_base64',
+                  return_value="data:image/jpeg;base64,encoded_image"), \
+            patch('describepdf.core.openrouter_client.call_openrouter_api',
+                  return_value=mock_openrouter_response):
+            
+            # Execute test
+            status, result = core.convert_pdf_to_markdown(temp_pdf_file, test_config, progress_callback)
+            
+            # Assert results
+            assert status.startswith("Conversion completed successfully")
+            assert result is not None
+            
+            assert "## Page 1" in result
+            assert "## Page 3" in result
+            assert "## Page 2" not in result

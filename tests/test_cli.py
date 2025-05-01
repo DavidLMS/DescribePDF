@@ -368,3 +368,48 @@ class TestCLI:
             
             # Assert results
             mock_exit.assert_called_once_with(1)
+    
+    def test_run_cli_with_page_selection(self):
+        """Test running CLI with page selection."""
+        # Setup test
+        args = Namespace(
+            pdf_file="test.pdf",
+            output=None,
+            api_key="test_key",
+            local=False,
+            endpoint=None,
+            vlm_model=None,
+            language=None,
+            use_markitdown=None,
+            use_summary=None,
+            summary_model=None,
+            verbose=False,
+            pages="1,3,5-10"
+        )
+        
+        env_config = {
+            "openrouter_api_key": "env_key",
+            "or_vlm_model": "env_model",
+            "output_language": "Spanish",
+            "use_markitdown": False,
+            "use_summary": False
+        }
+        
+        with patch('describepdf.cli.setup_cli_parser', return_value=MagicMock()), \
+            patch('describepdf.cli.setup_cli_parser().parse_args', return_value=args), \
+            patch('os.path.exists', return_value=True), \
+            patch('os.path.isfile', return_value=True), \
+            patch('describepdf.cli.config.get_config', return_value=env_config), \
+            patch('describepdf.cli.create_progress_callback', return_value=MagicMock()), \
+            patch('describepdf.cli.core.convert_pdf_to_markdown', 
+                return_value=("Conversion completed successfully.", "# Markdown content")), \
+            patch('builtins.open', MagicMock()):
+            
+            # Execute test
+            cli.run_cli()
+            
+            # Assert results
+            # Verify convert_pdf_to_markdown was called with the correct configuration
+            _, kwargs = cli.core.convert_pdf_to_markdown.call_args
+            assert kwargs["cfg"]["provider"] == "openrouter"
+            assert kwargs["cfg"]["page_selection"] == "1,3,5-10" 

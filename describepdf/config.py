@@ -19,6 +19,8 @@ SCRIPT_DIR = pathlib.Path(__file__).parent.parent.absolute()
 PROMPTS_DIR = pathlib.Path(SCRIPT_DIR) / "prompts"
 
 # Default configuration values
+
+# Default configuration values
 DEFAULT_CONFIG: Dict[str, Any] = {
     "openrouter_api_key": None,
     "or_vlm_model": "qwen/qwen2.5-vl-72b-instruct",
@@ -30,7 +32,8 @@ DEFAULT_CONFIG: Dict[str, Any] = {
     
     "output_language": "English",
     "use_markitdown": False,
-    "use_summary": False
+    "use_summary": False,
+    "page_selection": None
 }
 
 # Mapping of prompt template identifiers to their file names
@@ -90,6 +93,9 @@ def load_env_config() -> Dict[str, Any]:
         
     if os.getenv("DEFAULT_USE_SUMMARY"):
         loaded_config["use_summary"] = str(os.getenv("DEFAULT_USE_SUMMARY")).lower() == 'true'
+    
+    if os.getenv("DEFAULT_PAGE_SELECTION"):
+        loaded_config["page_selection"] = os.getenv("DEFAULT_PAGE_SELECTION")
 
     logger.info("Configuration loaded from environment variables.")
     

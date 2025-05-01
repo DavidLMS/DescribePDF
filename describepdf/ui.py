@@ -29,6 +29,7 @@ def convert_pdf_to_descriptive_markdown(
     ui_use_md: bool, 
     ui_use_sum: bool, 
     ui_sum_model: str, 
+    ui_page_selection: str,
     progress: gr.Progress = gr.Progress(track_tqdm=True)
 ) -> Tuple[str, gr.update, Optional[str]]:
     """
@@ -47,6 +48,7 @@ def convert_pdf_to_descriptive_markdown(
         ui_use_md: Whether to use Markitdown for enhanced text extraction
         ui_use_sum: Whether to generate a document summary for context
         ui_sum_model: Summary model name from UI (e.g., google/gemini-2.5-flash-preview)
+        ui_page_selection: Optional page selection string (e.g., "1,3,5-10")
         progress: Gradio progress tracker
         
     Returns:
@@ -72,7 +74,8 @@ def convert_pdf_to_descriptive_markdown(
         "output_language": ui_lang,
         "use_markitdown": ui_use_md,
         "use_summary": ui_use_sum,
-        "summary_llm_model": ui_sum_model if ui_sum_model else env_config.get("or_summary_model")
+        "summary_llm_model": ui_sum_model if ui_sum_model else env_config.get("or_summary_model"),
+        "page_selection": ui_page_selection.strip() if ui_page_selection.strip() else None
     }
 
     # Validate API key
@@ -243,6 +246,12 @@ def create_ui() -> gr.Blocks:
                     allow_custom_value=True,
                     info="Select or type the desired output language (e.g., English, Spanish)"
                 )
+                page_selection_input = gr.Textbox(
+                    label="Page Selection (Optional)", 
+                    value="",
+                    placeholder="Example: 1,3,5-10,15 (leave empty for all pages)",
+                    info="Specify individual pages or ranges to process"
+                )
                 with gr.Row():
                     use_markitdown_checkbox = gr.Checkbox(
                         label="Use Markitdown for extra text context",
@@ -263,7 +272,7 @@ def create_ui() -> gr.Blocks:
         # Connect UI components
         conversion_inputs = [
             pdf_input, api_key_input, vlm_model_input, output_language_input,
-            use_markitdown_checkbox, use_summary_checkbox, summary_llm_model_input
+            use_markitdown_checkbox, use_summary_checkbox, summary_llm_model_input, page_selection_input
         ]
         conversion_outputs = [
             progress_output, download_button, markdown_output
